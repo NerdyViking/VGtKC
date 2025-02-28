@@ -120,3 +120,33 @@
 .craft-btn:hover:not(:disabled) {
   background: rgba(90, 60, 42, 0.8);
 }
+
+/* Style the tab header to match D&D 5e */
+.sheet-tabs .item {
+  color: #f0e8d0; /* Light text color for D&D 5e theme */
+  text-transform: uppercase;
+  font-weight: bold;
+  padding: 5px 10px;
+  border-bottom: 2px solid transparent;
+}
+
+.sheet-tabs .item.active {
+  border-bottom: 2px solid #b32134; /* Red underline for active tab, matching D&D 5e */
+}
+
+/* Style the divider line */
+.tab-divider {
+  border: none;
+  border-top: 1px solid #b32134; /* Red divider line to match the screenshot */
+  margin: 5px 0;
+}
+
+/* Ensure the sheet body takes up the remaining space */
+.sheet-body {
+  padding: 10px;
+}
+
+/* Ensure the tab content is visible */
+.tab.reagents.active {
+  display: block;
+}
