@@ -259,6 +259,17 @@
 
   // Define the Crafting Window class
   Hooks.on("init", () => {
+    class VikarovRollDialog extends Dialog {
+      _getHeaderButtons() {
+        const buttons = super._getHeaderButtons();
+        return buttons.map(button => {
+          if (button.class === "close") {
+            button.label = ""; // Remove "Close" text
+          }
+          return button;
+        });
+      }
+    }
     class VikarovCraftingWindow extends Application {
       constructor(actor) {
         super();
@@ -428,48 +439,69 @@
           const defaultAbility = "int"; // Default to Intelligence for Alchemist's Supplies
           const rollData = this.actor.getRollData();
 
-          // Display a manual dialog for the Alchemist's Supplies check
-          const abilities = ["str", "dex", "con", "int", "wis", "cha"];
-          const dialogContent = `
-            <h2>Alchemist's Supplies Check (DC ${dc})</h2>
-            <p>Choose the ability to use for this check:</p>
-            <select id="ability-select">
-              ${abilities.map(a => `<option value="${a}" ${a === defaultAbility ? "selected" : ""}>${a.toUpperCase()} (Mod: ${rollData.abilities[a]?.mod || 0})</option>`).join("")}
-            </select>
-            <p>Proficiency Bonus: ${rollData.prof || 0}</p>
-            <p>Situational Bonus: <input type="text" id="bonus" value="0" style="width: 50px;" /></p>
-          `;
+          // Prepare data for the roll dialog template
+          const abilities = ["str", "dex", "con", "int", "wis", "cha"].map(key => ({
+            key,
+            label: key.toUpperCase(),
+            mod: rollData.abilities[key]?.mod || 0
+          }));
+          const rollModes = Object.entries(CONST.DICE_ROLL_MODES).map(([key, value]) => ({
+            value: value,
+            label: key.replace(/([A-Z])/g, ' $1').trim() // Convert camelCase to human-readable (e.g., "publicRoll" -> "Public Roll")
+          }));
+          const templateData = {
+            dc: dc,
+            abilities: abilities,
+            defaultAbility: defaultAbility,
+            profBonus: rollData.prof || 0,
+            rollModes: rollModes,
+            defaultRollMode: CONST.DICE_ROLL_MODES.PUBLIC
+          };
+
+          // Render the dialog using the template
+          const dialogContent = await renderTemplate("modules/vikarovs-guide-to-kaeliduran-crafting/templates/roll-dialog.hbs", templateData);
           const rollOptions = await new Promise(resolve => {
-            new Dialog({
+            const dialog = new VikarovRollDialog({
               title: "Alchemist's Supplies Check",
               content: dialogContent,
-              buttons: {
-                roll: {
-                  label: "Roll",
-                  callback: html => {
-                    const ability = html.find("#ability-select").val();
-                    const bonus = parseInt(html.find("#bonus").val()) || 0;
-                    resolve({ ability, bonus });
-                  }
-                },
-                cancel: {
-                  label: "Cancel",
-                  callback: () => resolve(null)
-                }
+              buttons: {}, // Remove Roll and Cancel buttons
+              render: html => {
+                // Add event listeners to the Advantage/Normal/Disadvantage buttons to trigger the roll
+                html.find(".advantage-buttons button").click(function() {
+                  html.find(".advantage-buttons button").removeClass("selected");
+                  $(this).addClass("selected");
+                  const ability = html.find("#ability-select").val();
+                  const bonus = parseInt(html.find("#bonus").val()) || 0;
+                  const rollMode = html.find("#roll-mode").val();
+                  const advantageMode = $(this).data("mode");
+                  resolve({ ability, bonus, rollMode, advantageMode });
+                  dialog.close(); // Close the dialog after rolling
+                });
               },
-              default: "roll"
-            }).render(true);
+              close: () => resolve(null) // Handle dialog closure (e.g., X button)
+            }, {
+              classes: ["dnd5e2", "sheet", "item", "dialog"] // Add D&D 5e sheet classes for styling
+            });
+            dialog.render(true);
           });
 
           if (!rollOptions) return; // User canceled the roll
 
-          // Construct the roll using the selected ability and @prof
-          const roll = new Roll(`1d20 + @abilities.${rollOptions.ability}.mod + @prof + ${rollOptions.bonus}`, rollData);
+          // Construct the roll with the selected options
+          let rollFormula = "1d20";
+          if (rollOptions.advantageMode === "advantage") {
+            rollFormula = "2d20kh1";
+          } else if (rollOptions.advantageMode === "disadvantage") {
+            rollFormula = "2d20kl1";
+          }
+          rollFormula += ` + @abilities.${rollOptions.ability}.mod + @prof + ${rollOptions.bonus}`;
+          const roll = new Roll(rollFormula, rollData);
           const rollResult = await roll.roll();
 
           await rollResult.toMessage({
             speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-            flavor: `Alchemist's Supplies Check (using ${rollOptions.ability.toUpperCase()})`
+            flavor: `Alchemist's Supplies Check (using ${rollOptions.ability.toUpperCase()})`,
+            rollMode: rollOptions.rollMode
           });
 
           const result = rollResult?.total;
@@ -493,7 +525,7 @@
         const highestSum = Math.max(ipSums.combat, ipSums.utility, ipSums.entropy);
         let adjustedSum = highestSum;
         const type = this.determineConsumableType(ipSums);
-
+      
         if (outcome === "standardFailure") {
           const roll = new Roll("1d4");
           roll.evaluateSync();
@@ -505,10 +537,10 @@
           adjustedSum -= roll.total;
           ui.notifications.warn("Crafting succeeded, but with a significant mistake—unstable result.");
         }
-
+      
         const rarity = this.determineRarity(adjustedSum);
         const consumable = this.createConsumable(rarity, type);
-
+      
         const reagentValues = this.reagents.map(r => {
           if (r && r.system?.rarity) {
             return this.getReagentValue(r.system.rarity);
@@ -518,10 +550,27 @@
         const baseCost = this.getBaseCost(rarity);
         const reagentSum = reagentValues.reduce((a, b) => a + b, 0);
         const totalCost = reagentSum >= baseCost ? 10 : Math.max(10, baseCost - reagentSum);
-
-        await this.updateInventoryAndGold(consumable, totalCost);
-
-        const message = `Crafted ${consumable.name} (${rarity}) for ${totalCost} gp.`;
+      
+        // Determine the number of items based on the outcome
+        const numItems = outcome === "criticalSuccess" ? 2 : 1;
+      
+        // Create the items (one or two based on outcome)
+        const consumables = [];
+        for (let i = 0; i < numItems; i++) {
+          const newConsumable = this.createConsumable(rarity, type); // Create a new instance each time for unique items
+          consumables.push(newConsumable);
+        }
+      
+        // Update inventory with the crafted items
+        await this.updateInventoryAndGold(consumables, totalCost);
+      
+        // Update the message to reflect the number of items crafted
+        let message;
+        if (numItems > 1) {
+          message = `Crafted ${numItems} items: ${consumables.map(c => `${c.name} (${rarity})`).join(", ")} for ${totalCost} gp.`;
+        } else {
+          message = `Crafted ${consumables[0].name} (${rarity}) for ${totalCost} gp.`;
+        }
         ui.notifications.info(message);
         ChatMessage.create({
           content: message,
@@ -576,13 +625,13 @@
         return values[rarity] || 0;
       }
 
-      async updateInventoryAndGold(consumable, cost) {
+      async updateInventoryAndGold(consumables, cost) {
         const currency = this.actor.system.currency || { gp: 0 };
         if (currency.gp < cost) {
           ui.notifications.error("Not enough gold to craft this item!");
           return;
         }
-
+      
         const updates = [];
         const deletes = [];
         for (const reagent of this.reagents.filter(r => r && r.id)) {
@@ -598,7 +647,7 @@
             deletes.push(reagent.id);
           }
         }
-
+      
         // Update quantities for reagents with quantity > 1
         if (updates.length > 0) {
           try {
@@ -609,7 +658,7 @@
             return;
           }
         }
-
+      
         // Delete reagents with quantity 0
         if (deletes.length > 0) {
           try {
@@ -620,16 +669,17 @@
             return;
           }
         }
-
+      
         await this.actor.update({
           "system.currency.gp": currency.gp - cost
         });
-
+      
         try {
-          await this.actor.createEmbeddedDocuments("Item", [consumable.toObject()]);
+          // Add all consumables to the inventory
+          await this.actor.createEmbeddedDocuments("Item", consumables.map(c => c.toObject()));
         } catch (error) {
-          console.error("Error adding consumable:", error);
-          ui.notifications.error("Failed to add crafted item to inventory. Check permissions.");
+          console.error("Error adding consumables:", error);
+          ui.notifications.error("Failed to add crafted items to inventory. Check permissions.");
         }
       }
     }

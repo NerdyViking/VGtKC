@@ -159,3 +159,97 @@
   margin: 2px 0;
   color: #f0e8d0; /* Match D&D 5e light text color */
 }
+
+/* Roll Dialog Styling */
+.vikarov-roll-dialog {
+  color: #f0e8d0; /* D&D 5e light text color */
+}
+
+.vikarov-roll-dialog .form-group {
+  margin-bottom: 10px;
+}
+
+.vikarov-roll-dialog label {
+  display: inline-block;
+  width: 120px;
+  font-weight: bold;
+  color: #f0e8d0; /* D&D 5e light text color */
+}
+
+.vikarov-roll-dialog select,
+.vikarov-roll-dialog input {
+  width: 150px;
+  background: #191813; /* D&D 5e dark background */
+  color: #f0e8d0; /* D&D 5e light text */
+  border: 1px solid #666;
+  border-radius: 3px;
+}
+
+.vikarov-roll-dialog span {
+  color: #f0e8d0;
+}
+
+.vikarov-roll-dialog .advantage-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.vikarov-roll-dialog .advantage-buttons button {
+  flex: 1;
+  margin: 0 5px;
+  padding: 5px;
+  border: 1px solid #666;
+  border-radius: 3px;
+  background: #191813; /* Match situational bonus input background */
+  color: #fff;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.vikarov-roll-dialog .advantage-buttons button.selected {
+  background: #b32134; /* D&D 5e red highlight */
+  border-color: #b32134;
+}
+
+/* Ensure the dialog content aligns with D&D 5e sheet padding */
+.vikarov-roll-dialog .sheet-content {
+  padding: 10px;
+}
+
+/* Roll Dialog Header Styling */
+.vikarov-roll-dialog .sheet-header .header-content {
+  text-align: center;
+}
+
+.vikarov-roll-dialog .sheet-header .title {
+  font-size: 1.25rem; /* Reduce font size by about half (default is ~2.5rem) */
+  margin: 0;
+  color: #f0e8d0; /* D&D 5e light text color */
+}
+
+.vikarov-roll-dialog .sheet-header .subtitle {
+  font-size: 1rem;
+  margin: 5px 0 0 0;
+  color: #f0e8d0; /* D&D 5e light text color */
+  font-weight: normal;
+}
+
+/* Dialog Button Styling */
+.dnd5e2.sheet.dialog .vikarov-roll-dialog .dialog-buttons button {
+  flex: 1;
+  margin: 0 5px;
+  padding: 5px;
+  background: #191813; /* D&D 5e dark background */
+  color: #fff;
+  border: 1px solid #666;
+  border-radius: 3px;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.dnd5e2.sheet.dialog .vikarov-roll-dialog .dialog-buttons button:hover {
+  background: #2a2620; /* Slightly lighter on hover */
+}
