@@ -1,0 +1,25 @@
+{
+  "id": "vikarovs-guide-to-kaeliduran-crafting",
+  "title": "Vikarov's Guide to Kaeliduran Crafting",
+  "version": "1.0.0",
+  "compatibility": {
+    "minimum": "10",
+    "verified": "12.331"
+  },
+  "system": ["dnd5e"],
+  "systems": [
+    {
+      "id": "dnd5e",
+      "version": "4.3.5"
+    }
+  ],
+  "scripts": ["scripts/main.js"],
+  "styles": ["styles/module.css"],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ]
+}

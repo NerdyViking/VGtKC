@@ -1,0 +1,547 @@
+<form class="{{cssClass}} dnd5e sheet item" autocomplete="off">
+    <header class="sheet-header">
+        <div class="left">
+            <img class="item-image" src="{{item.img}}" alt="{{item.name}}" data-edit="img"/>
+        </div>
+        <div class="middle identity-info">
+            <input type="text" name="name" value="{{item.name}}" class="document-name uninput"/>
+            <ul class="subtitles unlist">
+                {{#if (eq system.type "backpack")}}
+                <li class="item-capacity">
+                    <input type="number" name="system.capacity.value" value="{{system.capacity.value}}" min="0" step="1"/>
+                    <select name="system.capacity.type">
+                        {{selectOptions config.capacityTypes value=system.capacity.type localize=true}}
+                    </select>
+                </li>
+                {{else}}
+                <li class="item-rarity">
+                    <select name="system.rarity">
+                        {{selectOptions config.rarity value=system.rarity localize=true blank="Rarity"}}
+                    </select>
+                </li>
+                {{/if}}
+            </ul>
+        </div>
+        <div class="right common-fields {{system.type}} {{system.category.subtype}}">
+            <div class="quantity">
+                <span class="separator">&times;</span>
+                <input type="number" name="system.quantity" value="{{system.quantity}}" min="0" step="1"/>
+            </div>
+            <div class="weight">
+                <input type="number" name="system.weight.value" value="{{system.weight.value}}" min="0" step="any"/>
+                <select name="system.weight.units">
+                    {{selectOptions config.weightUnits value=system.weight.units localize=true}}
+                </select>
+            </div>
+            <div class="price">
+                <input type="number" name="system.price.value" value="{{system.price.value}}" min="0" step="any"/>
+                <select name="system.price.denomination">
+                    {{selectOptions config.currencies value=system.price.denomination localize=true}}
+                </select>
+            </div>
+            {{#if (eq system.type "backpack")}}
+            <div class="capacity">
+                <input type="number" name="system.capacity.weightless" value="{{system.capacity.weightless}}" min="0" step="1"/>
+            </div>
+            <div class="capacity">
+                <input type="number" name="system.capacity.carryMax" value="{{system.capacity.carryMax}}" min="0" step="1"/>
+                <select name="system.capacity.weightUnit">
+                    {{selectOptions config.weightUnits value=system.capacity.weightUnit localize=true}}
+                </select>
+            </div>
+            {{else if system.attunement}}
+            <div class="attunement">
+                <select name="system.attunement">
+                    {{selectOptions config.attunementTypes value=system.attunement localize=true blank=""}}
+                </select>
+            </div>
+            {{/if}}
+            {{#if (eq system.type "weapon")}}
+            <div class="proficiency">
+                <select name="system.proficiency">
+                    {{selectOptions config.proficiencies value=system.proficiency localize=true blank=""}}
+                </select>
+            </div>
+            {{/if}}
+        </div>
+    </header>
+
+    <nav class="sheet-navigation tabs" data-group="primary">
+        <a class="item interface-only {{unless expanded.description "active"}}" data-tab="description" draggable="true">
+            <span>{{localize "DND5E.Description"}}</span>
+        </a>
+        <a class="item interface-only {{if expanded.description "active"}}" data-tab="details" draggable="true">
+            <span>{{localize "DND5E.Details"}}</span>
+        </a>
+        {{#if (eq system.type "backpack")}}
+        <a class="item interface-only" data-tab="contents" draggable="true">
+            <span>{{localize "DND5E.Contents"}}</span>
+        </a>
+        {{/if}}
+        {{#if (eq system.type "spell")}}
+        <a class="item interface-only" data-tab="activities" draggable="true">
+            <span>{{localize "DND5E.Activities"}}</span>
+        </a>
+        <a class="item interface-only" data-tab="advancement" draggable="true">
+            <span>{{localize "DND5E.Advancement"}}</span>
+        </a>
+        {{/if}}
+        <a class="item interface-only" data-tab="effects" draggable="true">
+            <span>{{localize "DND5E.Effects"}}</span>
+        </a>
+    </nav>
+
+    <hr class="ampersand">
+
+    <section class="sheet-body">
+        <div class="tab contents" data-group="primary" data-tab="contents">
+            <{{item-list "inventory-element" v2}}>
+                <div class="top">
+                    <ul class="containers unlist">
+                        {{#each system.containers as |container|}}
+                        <li class="container">
+                            <label class="checkbox">
+                                <input type="checkbox" name="system.containers.{{@index}}.equipped" {{checked container.equipped}}/>
+                                <span>{{container.name}}</span>
+                            </label>
+                            <input type="number" name="system.containers.{{@index}}.capacity.value" value="{{container.capacity.value}}"/>
+                            <select name="system.containers.{{@index}}.capacity.type">
+                                {{selectOptions ../../config.capacityTypes value=container.capacity.type localize=true}}
+                            </select>
+                            <a class="item-control item-delete" data-action="deleteContainer" data-index="{{@index}}"><i class="fas fa-trash"></i></a>
+                        </li>
+                        {{/each}}
+                    </ul>
+                </div>
+                <section class="currency">
+                    <button type="button" class="item-action unbutton" data-action="currency" data-tooltip="DND5E.CurrencyManager.Title" aria-label="{{localize "DND5E.CurrencyManager.Title"}}">
+                        <i class="fas fa-coins"></i>
+                    </button>
+                </section>
+                <div class="middle">
+                    <{{item-list-controls for="inventory" label=(localize "DND5E.SearchInventory") sort="toggle" group="" group-label=(localize "DND5E.CategoryGroup") collection="items"}} />
+                </div>
+                <section class="items-list inventory-list" data-item-list="inventory"></section>
+            </{{item-list}}>
+        </div>
+
+        <div class="tab {{unless expanded.description "active"}}" data-group="primary" data-tab="description">
+            <div class="item-descriptions">
+                <{{#*inline "descriptionCard"}}
+                    <div class="card description collapsible {{if (eq content "") "empty"}} {{if expanded "expanded" "collapsed"}}" data-target="{{target}}">
+                        <div class="header">
+                            <span>{{label}}</span>
+                            <button type="button" class="description-edit unbutton" data-target="{{target}}" aria-label="{{localize "DND5E.DescriptionEdit" label=label}}">
+                                <i class="fas fa-feather" inert></i>
+                            </button>
+                        </div>
+                        <div class="details collapsible-content">
+                            <div class="wrapper">
+                                <{{editor content=content target=target engine="prosemirror" collaborate=false}} />
+                            </div>
+                        </div>
+                    </div>
+                {{/inline}}
+
+                {{> descriptionCard label=(localize "DND5E.Description") target="system.description.value" content=system.description.value expanded=expanded.description}}
+                {{> descriptionCard label=(localize "DND5E.UnidentifiedDescription") target="system.unidentified.description" content=system.unidentified.description expanded=expanded.unidentified}}
+                {{> descriptionCard label=(localize "DND5E.ChatDescription") target="system.description.chat" content=system.description.chat expanded=expanded.chat}}
+            </div>
+            <ul class="pills"></ul>
+        </div>
+
+        <div class="tab details {{if expanded.description "active"}}" data-group="primary" data-tab="details">
+            {{#if (eq system.type "backpack")}}
+            <fieldset>
+                <legend>{{localize "DND5E.TypeBackpack"}}</legend>
+                <div class="form-group">
+                    <label>{{localize "DND5E.IgnoreWeight"}}</label>
+                    <div class="form-fields">
+                        <label class="checkbox">
+                            <input type="checkbox" name="system.ignoreWeight" {{checked system.ignoreWeight}} />
+                            <span>{{#if system.ignoreWeight}}{{localize "DND5E.Yes"}}{{else}}{{localize "DND5E.No"}}{{/if}}</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.IgnoreCurrency"}}</label>
+                    <div class="form-fields">
+                        <label class="checkbox">
+                            <input type="checkbox" name="system.ignoreCurrency" {{checked system.ignoreCurrency}} />
+                            <span>{{#if system.ignoreCurrency}}{{localize "DND5E.Yes"}}{{else}}{{localize "DND5E.No"}}{{/if}}</span>
+                        </label>
+                    </div>
+                </div>
+            </fieldset>
+            {{else if (eq system.type "consumable")}}
+            <fieldset>
+                <legend>{{localize "DND5E.TypeConsumable"}}</legend>
+                <div class="form-group">
+                    <label>{{localize "DND5E.ConsumableType"}}</label>
+                    <div class="form-fields">
+                        <select name="system.type.value">
+                            {{selectOptions config.consumableTypes value=system.type.value localize=true}}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.Uses"}}</label>
+                    <div class="form-fields">
+                        <input type="number" name="system.uses.value" value="{{system.uses.value}}" min="0" step="1"/>
+                        <span class="separator">/</span>
+                        <input type="number" name="system.uses.max" value="{{system.uses.max}}" min="0" step="1"/>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.UsesRecovery"}}</label>
+                    <div class="form-fields">
+                        <select name="system.uses.recovery">
+                            {{selectOptions config.restTypes value=system.uses.recovery localize=true blank=""}}
+                        </select>
+                        <input type="number" name="system.uses.recharge" value="{{system.uses.recharge}}" min="1" step="1"/>
+                    </div>
+                </div>
+                <div class="form-group stacked">
+                    <label>{{localize "DND5E.UsesAutoDestroy"}}</label>
+                    <div class="form-fields">
+                        <label class="checkbox">
+                            <input type="checkbox" name="system.uses.autoDestroy" {{checked system.uses.autoDestroy}} />
+                            <span>{{#if system.uses.autoDestroy}}{{localize "DND5E.Yes"}}{{else}}{{localize "DND5E.No"}}{{/if}}</span>
+                        </label>
+                    </div>
+                </div>
+            </fieldset>
+            {{else if (eq system.type "equipment")}}
+            <fieldset>
+                <legend>{{localize "DND5E.TypeEquipment"}}</legend>
+                <div class="form-group">
+                    <label>{{localize "DND5E.EquipmentType"}}</label>
+                    <div class="form-fields">
+                        <select name="system.type.value">
+                            {{selectOptions config.equipmentTypes value=system.type.value localize=true}}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.ArmorClass"}}</label>
+                    <div class="form-fields">
+                        <input type="number" name="system.armor.value" value="{{system.armor.value}}" min="0" step="1"/>
+                        <span class="separator">+</span>
+                        <input type="number" name="system.armor.dex" value="{{system.armor.dex}}" step="1"/>
+                        <span class="separator">+</span>
+                        <input type="number" name="system.armor.bonus" value="{{system.armor.bonus}}" min="0" step="1"/>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.Speed"}}</label>
+                    <div class="form-fields">
+                        <input type="number" name="system.speed.value" value="{{system.speed.value}}" min="0" step="1"/>
+                        <select name="system.speed.units">
+                            {{selectOptions config.distanceUnits value=system.speed.units localize=true}}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.StrengthRequirement"}}</label>
+                    <div class="form-fields">
+                        <input type="number" name="system.strength" value="{{system.strength}}" min="0" step="1"/>
+                    </div>
+                </div>
+                <div class="form-group stacked">
+                    <label>{{localize "DND5E.StealthDisadvantage"}}</label>
+                    <div class="form-fields">
+                        <label class="checkbox">
+                            <input type="checkbox" name="system.stealth" {{checked system.stealth}} />
+                            <span>{{#if system.stealth}}{{localize "DND5E.Yes"}}{{else}}{{localize "DND5E.No"}}{{/if}}</span>
+                        </label>
+                    </div>
+                </div>
+            </fieldset>
+            {{else if (eq system.type "spell")}}
+            <fieldset>
+                <legend>{{localize "DND5E.TypeSpell"}}</legend>
+                <div class="form-group">
+                    <label>{{localize "DND5E.SpellLevel"}}</label>
+                    <div class="form-fields">
+                        <select name="system.level">
+                            {{selectOptions config.spellLevels value=system.level localize=true}}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.SpellSchool"}}</label>
+                    <div class="form-fields">
+                        <select name="system.school">
+                            {{selectOptions config.spellSchools value=system.school localize=true}}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.SpellPreparationMode"}}</label>
+                    <div class="form-fields">
+                        <select name="system.preparation.mode">
+                            {{selectOptions config.spellPreparationModes value=system.preparation.mode localize=true}}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.SpellCastingTime"}}</label>
+                    <div class="form-fields">
+                        <input type="number" name="system.activation.time" value="{{system.activation.time}}" min="0" step="1"/>
+                        <select name="system.activation.type">
+                            {{selectOptions config.abilityActivationTypes value=system.activation.type localize=true blank=(localize "DND5E.None")}}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.SpellDamageScaling"}}</label>
+                    <div class="form-fields">
+                        <select name="system.scaling.mode">
+                            {{selectOptions config.spellScalingModes value=system.scaling.mode localize=true blank=(localize "DND5E.None")}}
+                        </select>
+                        <input type="number" name="system.scaling.level" value="{{system.scaling.level}}" min="1" step="1"/>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.SpellDuration"}}</label>
+                    <div class="form-fields">
+                        <input type="number" name="system.duration.value" value="{{system.duration.value}}" min="0" step="1"/>
+                        <select name="system.duration.units">
+                            {{selectOptions config.timePeriods value=system.duration.units localize=true blank=(localize "DND5E.None")}}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.SpellRange"}}</label>
+                    <div class="form-fields">
+                        <input type="number" name="system.range.value" value="{{system.range.value}}" min="0" step="1"/>
+                        <select name="system.range.units">
+                            {{selectOptions config.distanceUnits value=system.range.units localize=true blank=(localize "DND5E.None")}}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.SpellTarget"}}</label>
+                    <div class="form-fields">
+                        <input type="number" name="system.target.value" value="{{system.target.value}}" min="0" step="1"/>
+                        <select name="system.target.units">
+                            {{selectOptions config.targetUnits value=system.target.units localize=true blank=(localize "DND5E.None")}}
+                        </select>
+                        <select name="system.target.type">
+                            {{selectOptions config.targetTypes value=system.target.type localize=true blank=(localize "DND5E.None")}}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.SpellComponents"}}</label>
+                    <div class="form-fields">
+                        <select name="system.components.value">
+                            {{selectOptions config.spellComponents value=system.components.value localize=true blank=(localize "DND5E.None")}}
+                        </select>
+                        <select name="system.components.secondary">
+                            {{selectOptions config.spellComponents value=system.components.secondary localize=true blank=(localize "DND5E.None")}}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.SpellMaterials"}}</label>
+                    <div class="form-fields">
+                        <input type="text" name="system.materials.value" value="{{system.materials.value}}"/>
+                    </div>
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>{{localize "DND5E.SpellTags"}}</legend>
+                <div class="form-group">
+                    <label>{{localize "DND5E.SpellConcentration"}}</label>
+                    <div class="form-fields">
+                        <label class="checkbox">
+                            <input type="checkbox" name="system.components.concentration" {{checked system.components.concentration}} />
+                            <span>{{#if system.components.concentration}}{{localize "DND5E.Yes"}}{{else}}{{localize "DND5E.No"}}{{/if}}</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.SpellRitual"}}</label>
+                    <div class="form-fields">
+                        <label class="checkbox">
+                            <input type="checkbox" name="system.components.ritual" {{checked system.components.ritual}} />
+                            <span>{{#if system.components.ritual}}{{localize "DND5E.Yes"}}{{else}}{{localize "DND5E.No"}}{{/if}}</span>
+                        </label>
+                    </div>
+                </div>
+            </fieldset>
+            {{else if (eq system.type "tool")}}
+            <fieldset>
+                <legend>{{localize "DND5E.TypeTool"}}</legend>
+                <div class="form-group">
+                    <label>{{localize "DND5E.ToolType"}}</label>
+                    <div class="form-fields">
+                        <select name="system.type.value">
+                            {{selectOptions config.toolTypes value=system.type.value localize=true}}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.Ability"}}</label>
+                    <div class="form-fields">
+                        <select name="system.ability">
+                            {{selectOptions config.abilities value=system.ability localize=true blank=(localize "DND5E.None")}}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.Proficiency"}}</label>
+                    <div class="form-fields">
+                        <select name="system.proficiency">
+                            {{selectOptions config.proficiencies value=system.proficiency localize=true blank=(localize "DND5E.None")}}
+                        </select>
+                    </div>
+                </div>
+            </fieldset>
+            {{else if (eq system.type "weapon")}}
+            <fieldset>
+                <legend>{{localize "DND5E.TypeWeapon"}}</legend>
+                <div class="form-group">
+                    <label>{{localize "DND5E.WeaponType"}}</label>
+                    <div class="form-fields">
+                        <select name="system.type.value">
+                            {{selectOptions config.weaponTypes value=system.type.value localize=true}}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.Proficiency"}}</label>
+                    <div class="form-fields">
+                        <select name="system.proficiency">
+                            {{selectOptions config.proficiencies value=system.proficiency localize=true blank=(localize "DND5E.None")}}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.WeaponDamage"}}</label>
+                    <div class="form-fields">
+                        <input type="number" name="system.damage.parts.0.0" value="{{system.damage.parts.0.0}}" min="1" step="1"/>
+                        <select name="system.damage.parts.0.1">
+                            {{selectOptions config.damageDice value=system.damage.parts.0.1 localize=true}}
+                        </select>
+                        <select name="system.damage.parts.0.2">
+                            {{selectOptions config.damageTypes value=system.damage.parts.0.2 localize=true blank=(localize "DND5E.None")}}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.WeaponVersatile"}}</label>
+                    <div class="form-fields">
+                        <input type="number" name="system.damage.versatile.0" value="{{system.damage.versatile.0}}" min="1" step="1"/>
+                        <select name="system.damage.versatile.1">
+                            {{selectOptions config.damageDice value=system.damage.versatile.1 localize=true blank=(localize "DND5E.None")}}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "DND5E.WeaponRange"}}</label>
+                    <div class="form-fields">
+                        <input type="number" name="system.range.value" value="{{system.range.value}}" min="0" step="1"/>
+                        <span class="separator">/</span>
+                        <input type="number" name="system.range.long" value="{{system.range.long}}" min="0" step="1"/>
+                        <select name="system.range.units">
+                            {{selectOptions config.distanceUnits value=system.range.units localize=true blank=(localize "DND5E.None")}}
+                        </select>
+                    </div>
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>{{localize "DND5E.WeaponProperties"}}</legend>
+                <div class="form-group stacked">
+                    <label>{{localize "DND5E.WeaponProperties"}}</label>
+                    <div class="form-fields checkbox-grid">
+                        {{#each config.weaponProperties as |label key|}}
+                        <label class="checkbox">
+                            <input type="checkbox" name="system.properties.{{key}}" {{checked (lookup ../system.properties key)}} />
+                            <span>{{localize label}}</span>
+                        </label>
+                        {{/each}}
+                    </div>
+                </div>
+            </fieldset>
+            {{else}}
+            <fieldset>
+                <legend>{{localize "DND5E.TypeLoot"}}</legend>
+                <div class="form-group">
+                    <label>{{localize "DND5E.LootType"}}</label>
+                    <div class="form-fields">
+                        <select name="system.type.value">
+                            {{selectOptions config.lootTypes value=system.type.value localize=true blank=""}}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group stacked checkbox-grid">
+                    <label>{{localize "DND5E.LootProperties"}}</label>
+                    <div class="form-fields">
+                        <label class="checkbox">
+                            <{{dnd5e-checkbox name="system.properties.mgc"}} />
+                            <span>{{localize "DND5E.Magical"}}</span>
+                        </label>
+                    </div>
+                </div>
+            </fieldset>
+            {{/if}}
+        </div>
+
+        <div class="tab activities" data-group="primary" data-tab="activities"></div>
+
+        <div class="tab advancement" data-group="primary" data-tab="advancement">
+            <section class="items-list"></section>
+        </div>
+
+        <div class="tab effects" data-group="primary" data-tab="effects">
+            <{{dnd5e-effects "effects-element" v2}}>
+                <{{item-list-controls for="effects" label=(localize "DND5E.SearchEffects") sort="a" collection="effects"}} />
+                <section class="items-list effects-list" data-item-list="effects">
+                    {{#each effects as |section type|}}
+                    <div class="items-section card" data-effect-type="{{type}}" {{unless section.length "hidden"}}>
+                        <div class="items-header header {{if section.disabled "disabled"}}">
+                            <h3 class="item-name effect-name">{{section.label}}</h3>
+                            <div class="item-header effect-source">{{localize "DND5E.Source"}}</div>
+                            <div class="item-header item-controls effect-controls">
+                                {{#if section.disabled}}
+                                <a class="info-control" data-tooltip="{{section.info}}" aria-label="{{section.info}}">
+                                    <i class="fas fa-circle-question"></i>
+                                </a>
+                                {{/if}}
+                            </div>
+                        </div>
+                        <ol class="item-list unlist">
+                            {{#each section as |effect|}}
+                            <li class="item effect flexrow" data-item-id="{{effect.id}}" draggable="true">
+                                <div class="item-name effect-name flexrow">
+                                    <a class="item-image effect-image" style="background-image: url({{effect.icon}})"></a>
+                                    <h4>{{effect.name}}</h4>
+                                </div>
+                                <div class="item-detail effect-source">{{effect.sourceName}}</div>
+                                <div class="item-controls effect-controls flexrow">
+                                    <a class="item-control effect-toggle" data-action="toggle" data-tooltip="{{if effect.disabled "DND5E.EffectEnable" "DND5E.EffectDisable"}}" aria-label="{{if effect.disabled (localize "DND5E.EffectEnable") (localize "DND5E.EffectDisable")}}">
+                                        <i class="fas {{if effect.disabled "fa-check" "fa-ban"}}"></i>
+                                    </a>
+                                    <a class="item-control effect-edit" data-action="edit" data-tooltip="DND5E.EffectEdit" aria-label="{{localize "DND5E.EffectEdit"}}">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a class="item-control effect-delete" data-action="delete" data-tooltip="DND5E.EffectDelete" aria-label="{{localize "DND5E.EffectDelete"}}">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </li>
+                            {{/each}}
+                        </ol>
+                    </div>
+                    {{/each}}
+                </section>
+            </{{dnd5e-effects}}>
+        </div>
+    </section>
+
+    <button type="button" class="create-child gold-button interface-only" aria-label="{{localize "DND5E.Create"}}">
+        <i class="fas fa-plus" inert></i>
+    </button>
+</form>

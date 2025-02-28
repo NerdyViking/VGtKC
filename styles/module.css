@@ -1,0 +1,122 @@
+/* Crafting Window Styling */
+.triangle-container {
+  position: relative;
+  width: 100%; /* Use full width to match the window-content */
+  height: 300px; /* Adjusted height to balance space */
+  margin: 30px auto; /* Increased margin to add space above */
+}
+
+.slot-top-wrapper,
+.slot-bottom-left-wrapper,
+.slot-bottom-right-wrapper {
+  position: absolute;
+  text-align: center;
+}
+
+.slot-top-wrapper {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.slot-bottom-left-wrapper {
+  bottom: 0;
+  left: 10px; /* Small offset to avoid touching the border */
+}
+
+.slot-bottom-right-wrapper {
+  bottom: 0;
+  right: 10px; /* Small offset to avoid touching the border */
+}
+
+.reagent-slot {
+  position: relative;
+  width: 80px; /* Square slot */
+  height: 80px; /* Square slot */
+  border: 1px dashed #666;
+  background: rgba(25, 24, 19, 0.8); /* Semi-transparent dark background */
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reagent-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Ensure the image fills the slot */
+  border-radius: 3px;
+}
+
+.empty-text {
+  color: #ccc; /* Light text on dark background */
+  font-size: 12px;
+}
+
+.reagent-name-top,
+.reagent-name-bottom {
+  margin: 5px 0;
+  white-space: nowrap; /* Prevent text wrapping */
+}
+
+.reagent-name-top {
+  margin-bottom: 5px;
+}
+
+.reagent-name-bottom {
+  margin-top: 5px;
+}
+
+.remove-reagent {
+  margin-left: 5px;
+  color: #ff0000;
+  cursor: pointer;
+}
+
+.remove-reagent:hover {
+  color: #ff6666;
+}
+
+.ip-display {
+  position: absolute;
+  top: 60%; /* Position below the craft button */
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column; /* Vertical alignment */
+  align-items: center; /* Center horizontally */
+  pointer-events: none; /* Allows clicking through the IP display */
+  background: rgba(0, 0, 0, 0.5); /* Semi-transparent background for readability */
+  padding: 5px;
+  border-radius: 3px;
+}
+
+.ip-combat,
+.ip-utility,
+.ip-entropy {
+  margin: 2px 0; /* Space between rows */
+}
+
+.craft-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 2px 5px; /* Reduced padding to make button smaller */
+  background: rgba(74, 44, 26, 0.8); /* Semi-transparent to match Foundry's theme */
+  color: #fff; /* White text for contrast */
+  border: 1px solid #666;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px; /* Ensure text size fits */
+}
+
+.craft-btn:disabled {
+  background: rgba(51, 51, 51, 0.8);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.craft-btn:hover:not(:disabled) {
+  background: rgba(90, 60, 42, 0.8);
+}
