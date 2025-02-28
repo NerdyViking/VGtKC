@@ -3,8 +3,8 @@
   "title": "Vikarov's Guide to Kaeliduran Crafting",
   "description": "A module for Foundry VTT that adds a crafting system for D&D 5e, allowing players to craft items using reagents with specific influence points.",
   "version": "0.0.1",
-  "minimumCoreVersion": "9",
-  "compatibleCoreVersion": "11",
+  "minimumCoreVersion": "10",
+  "compatibleCoreVersion": "12",
   "author": "NerdyViking",
   "systems": ["dnd5e"],
   "esmodules": [

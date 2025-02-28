@@ -254,7 +254,7 @@
     };
 
     // Initial attempt to inject fields with a minimal delay
-    setTimeout(() => injectFields(1), 50); // Reduced delay to 50ms
+    setTimeout(() => injectFields(1), 50);
   });
 
   // Define the Crafting Window class
@@ -263,9 +263,9 @@
       constructor(actor) {
         super();
         this.actor = actor;
-        this.reagents = [null, null, null]; // Track selected reagents
+        this.reagents = [null, null, null];
       }
-  
+
       static get defaultOptions() {
         return foundry.utils.mergeObject(super.defaultOptions, {
           id: "vikarov-crafting-window",
@@ -274,7 +274,17 @@
           width: 500,
           height: 500,
           resizable: true,
-          classes: ["dnd5e2", "sheet", "item"] // Use dnd5e2 to match item sheet
+          classes: ["dnd5e2", "sheet", "item"]
+        });
+      }
+
+      _getHeaderButtons() {
+        const buttons = super._getHeaderButtons();
+        return buttons.map(button => {
+          if (button.class === "close") {
+            button.label = "";
+          }
+          return button;
         });
       }
 
@@ -285,13 +295,27 @@
         data.reagent1 = this.reagents[1];
         data.reagent2 = this.reagents[2];
 
-        // Calculate IPs if reagents are selected
         if (this.reagents.every(r => r)) {
           data.ipSums = this.calculateIPSums();
           data.canCraft = true;
+
+          // Calculate DC based on the highest IP
+          const highestSum = Math.max(data.ipSums.combat, data.ipSums.utility, data.ipSums.entropy);
+          if (highestSum <= 5) {
+            data.dc = 10; // Common
+          } else if (highestSum <= 7) {
+            data.dc = 15; // Uncommon
+          } else if (highestSum <= 9) {
+            data.dc = 20; // Rare
+          } else if (highestSum <= 11) {
+            data.dc = 25; // Very Rare
+          } else {
+            data.dc = 30; // Placeholder for higher values (legendary not handled yet)
+          }
         } else {
           data.ipSums = { combat: 0, utility: 0, entropy: 0 };
           data.canCraft = false;
+          data.dc = null; // No DC if not all slots are filled
         }
 
         return data;
@@ -300,7 +324,7 @@
       calculateIPSums() {
         const sums = { combat: 0, utility: 0, entropy: 0 };
         this.reagents.forEach(reagent => {
-          const flags = (reagent instanceof Item ? reagent.flags : reagent.flags) || {};
+          const flags = reagent?.flags || {};
           const craftingData = flags["vikarovs-crafting"] || {};
           sums.combat += craftingData.combat || 0;
           sums.utility += craftingData.utility || 0;
@@ -317,62 +341,40 @@
           slot.addEventListener("dragover", (event) => {
             event.preventDefault();
           });
+
           slot.addEventListener("drop", async (event) => {
             event.preventDefault();
-            
-            let itemId = event.dataTransfer.getData("text/plain");
+
+            const data = event.dataTransfer.getData("text/plain");
             let itemData;
             try {
-              itemData = JSON.parse(itemId);
+              itemData = JSON.parse(data);
             } catch (e) {
-              itemData = { uuid: itemId }; // Fallback to assuming it's a UUID string
+              itemData = { uuid: data };
             }
 
             let item = null;
             if (itemData.uuid) {
-              // Try to resolve the item using fromUuid
               try {
-                const resolvedItem = await fromUuid(itemData.uuid);
-                if (resolvedItem) {
-                  if (resolvedItem instanceof Item) {
-                    item = resolvedItem;
-                  } else if (resolvedItem.toObject) {
-                    item = resolvedItem.toObject();
-                  } else {
-                    item = resolvedItem;
-                  }
+                item = await fromUuid(itemData.uuid);
+                if (!item) {
+                  const extractedId = itemData.uuid.split(".").pop();
+                  item = this.actor.items.get(extractedId) || game.items.get(extractedId);
                 }
               } catch (error) {
                 console.error(`Error resolving UUID ${itemData.uuid}:`, error);
-              }
-
-              // Fallback: Try to find the item in the actor's inventory
-              if (!item) {
-                const extractedId = itemData.uuid.split(".").pop();
-                item = this.actor.items.get(extractedId) || this.actor.items.find(i => i.id === extractedId);
-              }
-
-              // Fallback: Try to find the item globally
-              if (!item) {
-                const extractedId = itemData.uuid.split(".").pop();
-                item = game.items.get(extractedId);
+                ui.notifications.error(`Could not find item with UUID ${itemData.uuid}.`);
+                return;
               }
             }
 
-            // Ensure item is a Loot type with isReagent === true
             if (item) {
-              const flags = (item instanceof Item ? item.flags : item.flags) || {};
+              const flags = item.flags || {};
               const craftingData = flags["vikarovs-crafting"] || {};
               const isReagent = craftingData.isReagent || false;
-              if (item.type === "loot" && isReagent === true && !this.reagents.includes(item)) {
-                if (item instanceof Item) {
-                  this.reagents[index] = item;
-                } else if (typeof item === "object" && item.name && item.id) {
-                  this.reagents[index] = new Item(item);
-                } else {
-                  ui.notifications.error(`Invalid item format for ${itemData.uuid || itemId}. Check item data.`);
-                  return;
-                }
+
+              if (item.type === "loot" && isReagent && !this.reagents.includes(item)) {
+                this.reagents[index] = item;
                 this.render();
               } else {
                 let errorMsg;
@@ -386,7 +388,7 @@
                 ui.notifications.error(errorMsg);
               }
             } else {
-              ui.notifications.error(`Could not find item with ID ${itemData.uuid || itemId}.`);
+              ui.notifications.error(`Could not find item with UUID ${itemData.uuid || data}.`);
             }
           });
         });
@@ -399,7 +401,9 @@
         });
 
         // Craft button with skill check
-        html.find(".craft-btn").click(async () => {
+        html.find(".craft-btn").click(async (event) => {
+          event.preventDefault();
+
           if (!this.reagents.every(r => r)) {
             ui.notifications.warn("Select three reagents to craft.");
             return;
@@ -407,26 +411,46 @@
 
           const ipSums = this.calculateIPSums();
           const highestSum = Math.max(ipSums.combat, ipSums.utility, ipSums.entropy);
-          const dc = {
-            1: 10, 13: 15, 22: 20, 28: 25, 31: 30
-          }[highestSum] || 10; // Default to Common (10) if no match
+          let dc;
+          if (highestSum <= 5) {
+            dc = 10; // Common
+          } else if (highestSum <= 7) {
+            dc = 15; // Uncommon
+          } else if (highestSum <= 9) {
+            dc = 20; // Rare
+          } else if (highestSum <= 11) {
+            dc = 25; // Very Rare
+          } else {
+            dc = 30; // Placeholder for higher values (legendary not handled yet)
+          }
 
-          // Show skill check dialog
-          const ability = await new Promise(resolve => {
-            const abilities = ["int", "wis", "dex"];
-            const dialogContent = `
-              <h2>Choose Ability for Alchemist's Supplies Check</h2>
-              <select id="ability-select">
-                ${abilities.map(a => `<option value="${a}">${a.toUpperCase()} (${this.actor.system.abilities[a].value})</option>`).join("")}
-              </select>
-            `;
+          const toolId = "alchemist"; // Correct key for Alchemist's Supplies in D&D 5e 4.3.5
+          const defaultAbility = "int"; // Default to Intelligence for Alchemist's Supplies
+          const rollData = this.actor.getRollData();
+
+          // Display a manual dialog for the Alchemist's Supplies check
+          const abilities = ["str", "dex", "con", "int", "wis", "cha"];
+          const dialogContent = `
+            <h2>Alchemist's Supplies Check (DC ${dc})</h2>
+            <p>Choose the ability to use for this check:</p>
+            <select id="ability-select">
+              ${abilities.map(a => `<option value="${a}" ${a === defaultAbility ? "selected" : ""}>${a.toUpperCase()} (Mod: ${rollData.abilities[a]?.mod || 0})</option>`).join("")}
+            </select>
+            <p>Proficiency Bonus: ${rollData.prof || 0}</p>
+            <p>Situational Bonus: <input type="text" id="bonus" value="0" style="width: 50px;" /></p>
+          `;
+          const rollOptions = await new Promise(resolve => {
             new Dialog({
-              title: "Crafting Skill Check",
+              title: "Alchemist's Supplies Check",
               content: dialogContent,
               buttons: {
                 roll: {
                   label: "Roll",
-                  callback: html => resolve(html.find("#ability-select").val())
+                  callback: html => {
+                    const ability = html.find("#ability-select").val();
+                    const bonus = parseInt(html.find("#bonus").val()) || 0;
+                    resolve({ ability, bonus });
+                  }
                 },
                 cancel: {
                   label: "Cancel",
@@ -437,18 +461,23 @@
             }).render(true);
           });
 
-          if (!ability) return;
+          if (!rollOptions) return; // User canceled the roll
 
-          // Use evaluate for asynchronous roll evaluation
-          const roll = new Roll(`1d20 + @abilities.${ability}.value + @prof`, this.actor.system);
-          await roll.evaluate({ async: true });
-          const result = roll.total;
+          // Construct the roll using the selected ability and @prof
+          const roll = new Roll(`1d20 + @abilities.${rollOptions.ability}.mod + @prof + ${rollOptions.bonus}`, rollData);
+          const rollResult = await roll.roll();
 
-          // Determine outcome
+          await rollResult.toMessage({
+            speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+            flavor: `Alchemist's Supplies Check (using ${rollOptions.ability.toUpperCase()})`
+          });
+
+          const result = rollResult?.total;
+          if (result === undefined) return; // Roll failed
+
           const outcome = this.determineOutcome(result, dc);
           await this.handleCraftingOutcome(outcome, ipSums);
 
-          // Re-render to update UI
           this.render();
         });
       }
@@ -467,35 +496,31 @@
 
         if (outcome === "standardFailure") {
           const roll = new Roll("1d4");
-          roll.evaluateSync(); // Use evaluateSync for simple rolls
+          roll.evaluateSync();
           adjustedSum -= roll.total;
           ui.notifications.info("Crafting succeeded, but with an error—reduced potency.");
         } else if (outcome === "criticalFailure") {
           const roll = new Roll("2d4");
-          roll.evaluateSync(); // Use evaluateSync for simple rolls
+          roll.evaluateSync();
           adjustedSum -= roll.total;
           ui.notifications.warn("Crafting succeeded, but with a significant mistake—unstable result.");
         }
 
-        // Determine rarity and consumable
         const rarity = this.determineRarity(adjustedSum);
         const consumable = this.createConsumable(rarity, type);
 
-        // Calculate cost with a minimum of 10 gp
         const reagentValues = this.reagents.map(r => {
-          if (r instanceof Item && r.system.rarity) {
+          if (r && r.system?.rarity) {
             return this.getReagentValue(r.system.rarity);
           }
-          return 0; // Default if no rarity
+          return 0;
         });
         const baseCost = this.getBaseCost(rarity);
         const reagentSum = reagentValues.reduce((a, b) => a + b, 0);
         const totalCost = reagentSum >= baseCost ? 10 : Math.max(10, baseCost - reagentSum);
 
-        // Automate inventory and gold updates
         await this.updateInventoryAndGold(consumable, totalCost);
 
-        // Notify player
         const message = `Crafted ${consumable.name} (${rarity}) for ${totalCost} gp.`;
         ui.notifications.info(message);
         ChatMessage.create({
@@ -510,7 +535,7 @@
         if (combat === maxSum) return "combat";
         if (utility === maxSum) return "utility";
         if (entropy === maxSum) return "entropy";
-        return "combat"; // Default fallback
+        return "combat";
       }
 
       determineRarity(sum) {
@@ -548,24 +573,47 @@
 
       getReagentValue(rarity) {
         const values = { common: 10, uncommon: 50, rare: 600, veryRare: 6000, legendary: 50000 };
-        return values[rarity] || 0; // Default to 0 if no rarity
+        return values[rarity] || 0;
       }
 
       async updateInventoryAndGold(consumable, cost) {
-        // Check if actor has enough gold
         const currency = this.actor.system.currency || { gp: 0 };
         if (currency.gp < cost) {
           ui.notifications.error("Not enough gold to craft this item!");
           return;
         }
 
-        // Consume reagents (handle IDs safely, checking for validity)
-        const reagentIds = this.reagents
-          .filter(r => r instanceof Item && r.id)
-          .map(r => r.id);
-        if (reagentIds.length > 0) {
+        const updates = [];
+        const deletes = [];
+        for (const reagent of this.reagents.filter(r => r && r.id)) {
+          const currentQuantity = reagent.system.quantity || 1;
+          if (currentQuantity > 1) {
+            // Reduce quantity by 1
+            updates.push({
+              _id: reagent.id,
+              "system.quantity": currentQuantity - 1
+            });
+          } else {
+            // If quantity would be 0, mark for deletion
+            deletes.push(reagent.id);
+          }
+        }
+
+        // Update quantities for reagents with quantity > 1
+        if (updates.length > 0) {
           try {
-            await this.actor.deleteEmbeddedDocuments("Item", reagentIds);
+            await this.actor.updateEmbeddedDocuments("Item", updates);
+          } catch (error) {
+            console.error("Error updating reagent quantities:", error);
+            ui.notifications.error("Failed to update reagent quantities. Check permissions.");
+            return;
+          }
+        }
+
+        // Delete reagents with quantity 0
+        if (deletes.length > 0) {
+          try {
+            await this.actor.deleteEmbeddedDocuments("Item", deletes);
           } catch (error) {
             console.error("Error deleting reagents:", error);
             ui.notifications.error("Failed to consume reagents. Check item IDs or permissions.");
@@ -573,12 +621,10 @@
           }
         }
 
-        // Deduct gold
         await this.actor.update({
           "system.currency.gp": currency.gp - cost
         });
 
-        // Add consumable to inventory
         try {
           await this.actor.createEmbeddedDocuments("Item", [consumable.toObject()]);
         } catch (error) {
@@ -595,15 +641,15 @@
   Hooks.on("getActorSheetHeaderButtons", (sheet, buttonArray) => {
     if (sheet.actor.type === "character" || sheet.actor.type === "npc") {
       let craftingButton = {
-        label: "", // Empty label for icon-only
+        label: "",
         class: "vikarov-crafting-btn",
-        icon: "fas fa-book-open", // Book icon for crafting
+        icon: "fas fa-book-open",
         onclick: () => {
           const craftingWindow = new VikarovCraftingWindow(sheet.actor);
           craftingWindow.render(true);
         }
       };
-      buttonArray.unshift(craftingButton); // Add to the leftmost position
+      buttonArray.unshift(craftingButton);
     }
   });
 
@@ -628,14 +674,10 @@
         const itemId = elem.dataset.itemId || elem.dataset.documentId || elem.dataset.entryId;
         let item = null;
 
-        // Use IIFE to handle async Compendium lookup safely
         (async () => {
-          // Try to resolve the item from Compendium or global
           if (itemId) {
-            // Check game.items (global items)
             item = game.items.get(itemId);
             if (!item) {
-              // Check Compendium contents
               for (const pack of game.packs.values()) {
                 if (pack.documentClass === "Item") {
                   try {
@@ -650,7 +692,6 @@
                 }
               }
               if (!item) {
-                // Fallback to global items
                 item = game.items.get(itemId);
               }
             }
