@@ -1,0 +1,33 @@
+<div class="dnd5e sheet item reagent-selection-dialog">
+    <header class="sheet-header">
+        <h1 class="charname">Select a Reagent</h1>
+    </header>
+    <section class="sheet-content">
+        <div class="search-bar">
+            <input type="text" class="reagent-search" value="{{searchQuery}}" placeholder="Search by name or essence (e.g., Primal)" />
+            <select class="sort-select">
+                <option value="name-asc" selected>Sort: Name (A-Z)</option>
+                <option value="name-desc">Sort: Name (Z-A)</option>
+                <option value="essence-asc">Sort: Essence (A-Z)</option>
+                <option value="essence-desc">Sort: Essence (Z-A)</option>
+                <option value="combat-desc">Sort: Combat (High to Low)</option>
+                <option value="combat-asc">Sort: Combat (Low to High)</option>
+                <option value="utility-desc">Sort: Utility (High to Low)</option>
+                <option value="utility-asc">Sort: Utility (Low to High)</option>
+                <option value="entropy-desc">Sort: Entropy (High to Low)</option>
+                <option value="entropy-asc">Sort: Entropy (Low to High)</option>
+            </select>
+        </div>
+        {{#if filteredReagents.length}}
+            {{#each filteredReagents}}
+            <div class="reagent-entry" data-item-id="{{this._id}}">
+                <img src="{{this.img}}" class="item-icon"/>
+                <span class="reagent-name">{{this.name}}</span>
+                <span class="reagent-details">({{this.essence}}: {{this.combat}}, {{this.utility}}, {{this.entropy}})</span>
+            </div>
+            {{/each}}
+        {{else}}
+            <p class="no-reagents">No reagents match your search.</p>
+        {{/if}}
+    </section>
+</div>

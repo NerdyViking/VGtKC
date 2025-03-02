@@ -1,0 +1,47 @@
+<div class="alchemy-crafting">
+    <h2>Alchemy Crafting</h2>
+    <div class="cauldron-container">
+        <div class="reagent-triangle">
+            {{#each selectedReagents as |reagent index|}}
+                <div class="reagent-slot" data-slot="{{index}}">
+                    {{#if reagent}}
+                        <img src="{{reagent.img}}" class="item-icon" />
+                    {{else}}
+                        +
+                    {{/if}}
+                </div>
+            {{/each}}
+        </div>
+    </div>
+    <div class="ip-display">
+        <p>Influence Points: <span class="ip-values">{{ipSums.combat}} / {{ipSums.utility}} / {{ipSums.entropy}}</span></p>
+        <div class="outcome-display">
+            {{#if hasTiebreaker}}
+                <p>Select Outcome:</p>
+                <div class="tiebreaker-options">
+                    {{#each tiebreakerOutcomes}}
+                        <div class="outcome-icon {{this.category}}-icon {{#if this.selected}}selected{{/if}}" data-category="{{this.category}}" title="{{this.tooltip}}"></div>
+                    {{/each}}
+                </div>
+            {{else}}
+                {{#if outcomeKnown}}
+                    <div class="outcome-icon {{outcomeCategory}}-icon" title="{{outcomeTooltip}}"></div>
+                {{else}}
+                    <div class="outcome-icon unknown-icon" title="Unknown Outcome"></div>
+                {{/if}}
+            {{/if}}
+        </div>
+        <button class="craft-btn" disabled>{{#if outcomeKnown}}Craft!{{else}}Experiment!{{/if}}</button>
+        <button class="clear-slots-btn">Clear Slots</button>
+    </div>
+</div>
+
+<div class="magic-crafting">
+    <h2>Magic Item Crafting</h2>
+    <div class="component-slot">+</div>
+    <div class="craftable-items">
+        <div class="craft-item">[Item 1]</div>
+        <div class="craft-item">[Item 2]</div>
+        <div class="craft-item">[Item 3]</div>
+    </div>
+</div>

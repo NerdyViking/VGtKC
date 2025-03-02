@@ -1,19 +1,42 @@
 {
   "name": "vikarovs-guide-to-kaeliduran-crafting",
   "title": "Vikarov's Guide to Kaeliduran Crafting",
-  "description": "A module for Foundry VTT that adds a crafting system for D&D 5e, allowing players to craft items using reagents with specific influence points.",
-  "version": "0.0.1",
-  "minimumCoreVersion": "10",
-  "compatibleCoreVersion": "12",
-  "author": "NerdyViking",
-  "systems": ["dnd5e"],
+  "description": "A custom alchemy crafting system for Foundry VTT, designed for the world of Kaelidur.",
+  "version": "0.1.0",
+  "author": "Your Name",
+  "compatibility": {
+    "minimum": "12",
+    "verified": "12.331"
+  },
   "esmodules": [
-    "./scripts/main.js"
+    "main.js",
+    "scripts/hooks.js",
+    "scripts/reagentSelectionDialog.js",
+    "scripts/craftingUI.js",
+    "scripts/reagents.js",
+    "scripts/utils.js"
   ],
   "styles": [
-    "./styles/module.css"
+    "styles.css"
   ],
-  "url": "https://github.com/NerdyViking/VGtKC",
-  "manifest": "https://github.com/NerdyViking/VGtKC/releases/latest/download/module.json",
-  "download": "https://github.com/NerdyViking/VGtKC/releases/download/0.0.1/module.zip"
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "packs": [
+    {
+      "name": "reagents",
+      "label": "Kaeliduran Reagents",
+      "path": "packs/reagents.db",
+      "type": "Item"
+    }
+  ],
+  "manifest": "https://your-hosting-url/module.json",
+  "download": "https://your-hosting-url/module.zip",
+  "license": "LICENSE",
+  "readme": "README.md",
+  "icon": "assets/icons/module-icon.png"
 }
