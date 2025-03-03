@@ -1,178 +1,55 @@
-/* Ensure the crafting tab expands and centers properly */
-.crafting-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    width: 100%;
-    height: 100%;
-    padding: 20px;
-    box-sizing: border-box;
-}
+/* === General Crafting Styles === */
 
-/* Force the crafting tab to take up full sheet space */
-.sheet-body .tab[data-tab="crafting"] {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    width: 100%;
-    height: 100%;
-    padding: 10px;
-    box-sizing: border-box;
-}
-
-/* Ensure crafting content only appears inside the crafting tab */
-.sheet-body .tab {
-    display: none !important;
-}
-
-.sheet-body .tab.active {
+/* Ensure tab content only appears when active */
+.sheet-body .main-content .tab-body .tab.crafting {
     display: flex !important;
     visibility: visible !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
 }
 
-/* Ensure crafting tab content is styled correctly */
-.crafting-tab {
+
+/* Show the tab content when the Crafting tab is active */
+.sheet-body .tab[data-tab="crafting"].active .main-content .tab-body .tab.crafting {
+    display: flex !important;
+    visibility: visible !important;
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
     width: 100%;
-    height: 100%;
     padding: 10px;
     box-sizing: border-box;
 }
 
-/* Make reagent slots larger and more visible */
-.reagent-slot {
-    width: 50px;
-    height: 50px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    background: rgba(0, 0, 0, 0.5);
-    text-align: center;
-    font-size: 24px;
-    font-weight: bold;
-    line-height: 50px;
-    cursor: pointer;
-    transition: background 0.2s ease-in-out;
+/* Center .alchemy-crafting within .main-content .tab-body .tab.crafting */
+.sheet-body .main-content .tab-body .tab.crafting .alchemy-crafting {
+    display: block !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    text-align: center !important;
+    width: fit-content !important;
+    max-width: 100%;
+    /* Debugging: Add a border to visualize the .alchemy-crafting area */
+    border: 2px dashed red;
 }
 
-/* Change background on hover to indicate interactivity */
-.reagent-slot:hover {
-    background: rgba(255, 255, 255, 0.1);
+/* Ensure the cauldron image is centered within .alchemy-crafting */
+.alchemy-crafting img {
+    display: block;
+    margin: 0 auto;
 }
 
-/* Ensure reagent slots are interactive */
-.reagent-slot {
-    pointer-events: all !important;
-    z-index: 1000 !important;
-}
-
-/* Hide entire crafting tab on first load */
-.tab.crafting-tab:not(.active) {
-    display: none;
-}
-
-/* ============================= */
-/* DnD5e-Themed Reagent Selection */
-/* ============================= */
-
-/* Apply DnD5e item sheet styles to the dialog */
-.window-app.reagent-selection-dialog {
-    color: var(--color-text-light-highlight, #f0f0e0);
-    box-sizing: border-box;
-}
-
-/* Window header (Foundry's default header) */
-.window-app.reagent-selection-dialog .window-header {
-    padding: 5px;
-    color: #ffffff;
-}
-
-/* Sheet header (custom header inside the dialog) */
-.window-app.reagent-selection-dialog .sheet-header {
-    padding: 8px;
-    text-align: center;
-}
-
-/* Title text */
-.window-app.reagent-selection-dialog .sheet-header h1 {
-    font-size: 22px;
-    font-weight: bold;
-    color: #ffffff;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-    margin: 0;
-}
-
-/* Reagent selection content - Use DnD5e's dark background */
-.window-app.reagent-selection-dialog .sheet-content {
-    padding: 8px;
-    flex: 1;
-    overflow: auto;
-    min-height: 200px;
-    width: calc(100% - 2px);
-    box-sizing: border-box;
-    background: transparent; /* Set transparent background as requested */
-}
-
-/* Search bar styling */
-.window-app.reagent-selection-dialog .search-bar {
-    padding: 8px;
-    background: #2e2e2e; /* Matches DnD5e dark background */
-    border-bottom: 1px solid #4b4a44; /* Subtle separator */
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-wrap: wrap; /* Allow wrapping if space is constrained */
-}
-
-.window-app.reagent-selection-dialog .reagent-search {
-    width: 100%;
-    padding: 5px 8px;
-    background: #1c2526; /* Darker input background */
-    color: #f0f0e0; /* Light text */
-    border: 1px solid #4b4a44; /* DnD5e-style border */
-    border-radius: 3px;
-    font-family: var(--font-primary, "Modesto Condensed", "Palatino Linotype", serif);
-    font-size: 14px;
-    box-sizing: border-box;
-}
-
-.window-app.reagent-selection-dialog .reagent-search::placeholder {
-    color: #c9c7b8; /* Lighter gray for placeholder, matching DnD5e */
-    font-style: italic;
-}
-
-.window-app.reagent-selection-dialog .reagent-search:focus {
-    outline: none;
-    border-color: #7a7971; /* Slightly lighter border on focus */
-    background: #252b2c; /* Slightly lighter background on focus */
-}
-
-/* Style the sort dropdown */
-.window-app.reagent-selection-dialog .sort-select {
-    background: #2e2e2e;
-    color: #f0f0e0;
-    border: 1px solid #4b4a44;
-    border-radius: 3px;
-    padding: 5px;
-    font-family: var(--font-primary, "Modesto Condensed", "Palatino Linotype", serif);
-    font-size: 14px;
-    width: 200px; /* Increased width to fit longer text */
-    height: 30px; /* Added to ensure field is tall enough for font */
-}
+/* === Reagent Slots and Cauldron === */
 
 /* Cauldron container styling */
 .cauldron-container {
     position: relative;
-    width: 150px;
-    height: 150px;
-    background: url('path/to/cauldron-placeholder.png') center center no-repeat;
+    width: 400px;
+    height: 400px;
+    background: url('./assets/cauldron.webp') center center no-repeat;
     background-size: contain;
-    opacity: 0.7;
+    opacity: 0.1;
 }
 
 /* Animate cauldron when all slots are filled */
@@ -187,22 +64,9 @@
     animation: bubble 2s infinite;
 }
 
-/* Bubbling animation */
-@keyframes bubble {
-    0% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
-    50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; }
-    100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
-}
-
 /* Flash animation on craft */
 .cauldron-container.crafting .reagent-triangle::after {
     animation: flash 0.5s;
-}
-
-/* Flash animation */
-@keyframes flash {
-    0% { background: radial-gradient(circle, rgba(255, 255, 255, 0.5), transparent); }
-    100% { background: radial-gradient(circle, rgba(0, 255, 0, 0.3), transparent); }
 }
 
 /* Position reagent slots in a triangle */
@@ -236,6 +100,31 @@
     right: 20px;
 }
 
+/* Make reagent slots larger, visible, and interactive */
+.reagent-slot {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.5);
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+    line-height: 50px;
+    cursor: pointer;
+    transition: background 0.2s ease-in-out;
+    pointer-events: all !important;
+    z-index: 1000 !important;
+}
+
+.reagent-slot:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* === Crafting UI Elements === */
+
 /* Style IP display */
 .ip-display {
     text-align: center;
@@ -264,28 +153,28 @@
 .combat-icon {
     background: url('path/to/combat-icon.png') center center no-repeat;
     background-size: contain;
-    background-color: rgba(255, 0, 0, 0.2); /* Red tint */
+    background-color: rgba(255, 0, 0, 0.2);
 }
 
 .utility-icon {
     background: url('path/to/utility-icon.png') center center no-repeat;
     background-size: contain;
-    background-color: rgba(0, 0, 255, 0.2); /* Blue tint */
+    background-color: rgba(0, 0, 255, 0.2);
 }
 
 .entropy-icon {
     background: url('path/to/entropy-icon.png') center center no-repeat;
     background-size: contain;
-    background-color: rgba(128, 0, 128, 0.2); /* Purple tint */
+    background-color: rgba(128, 0, 128, 0.2);
 }
 
 .unknown-icon {
-    background: url('path/to/question-mark.png') center center no-repeat;
+    background: url('assets/question-mark.png') center center no-repeat;
     background-size: contain;
 }
 
 .outcome-icon.selected {
-    border: 2px solid #ffffff;
+    border: 2px solid gold;
 }
 
 /* Tiebreaker options */
@@ -296,7 +185,8 @@
 }
 
 /* Craft and clear buttons */
-.craft-btn, .clear-slots-btn {
+.craft-btn,
+.clear-slots-btn {
     background: rgba(0, 0, 0, 0.6);
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -304,12 +194,13 @@
     margin: 5px;
     cursor: pointer;
     font-family: var(--font-primary, "Modesto Condensed", "Palatino Linotype", serif);
-    position: relative; /* Ensure proper event handling */
-    z-index: 1000; /* Increase z-index to ensure it’s above all other elements */
-    pointer-events: auto; /* Ensure the button receives pointer events */
+    position: relative;
+    z-index: 1000;
+    pointer-events: auto;
 }
 
-.craft-btn:hover, .clear-slots-btn:hover {
+.craft-btn:hover,
+.clear-slots-btn:hover {
     background: rgba(255, 255, 255, 0.2);
 }
 
@@ -318,10 +209,108 @@
     cursor: not-allowed;
 }
 
+/* Crafting history */
+.crafting-history {
+    margin-top: 10px;
+    padding: 5px;
+    border-top: 1px solid #ccc;
+}
+
+/* === Reagent Selection Dialog === */
+
+/* Apply DnD5e item sheet styles to the dialog */
+.window-app.reagent-selection-dialog {
+    color: var(--color-text-light-highlight, #f0f0e0);
+    box-sizing: border-box;
+    background: #1c2526;
+    border-radius: 5px;
+}
+
+/* Window header */
+.window-app.reagent-selection-dialog .window-header {
+    padding: 5px;
+    color: #ffffff;
+}
+
+/* Sheet header */
+.window-app.reagent-selection-dialog .sheet-header {
+    padding: 8px;
+    text-align: center;
+    height: 100px;
+}
+
+/* Title text */
+.window-app.reagent-selection-dialog .sheet-header h1 {
+    font-size: 22px;
+    font-weight: bold;
+    color: #ffffff;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    margin: 0;
+}
+
+/* Reagent selection content */
+.window-app.reagent-selection-dialog .sheet-content {
+    padding: 8px;
+    flex: 1;
+    overflow: auto;
+    min-height: 200px;
+    width: calc(100% - 2px);
+    box-sizing: border-box;
+    background: transparent;
+}
+
+/* Search bar styling */
+.window-app.reagent-selection-dialog .search-bar {
+    padding: 8px;
+    background: #2e2e2e;
+    border-bottom: 1px solid #4b4a44;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Reagent search input */
+.window-app.reagent-selection-dialog .reagent-search {
+    width: 100%;
+    padding: 5px 8px;
+    background: #1c2526;
+    color: #f0f0e0;
+    border: 1px solid #4b4a44;
+    border-radius: 3px;
+    font-family: var(--font-primary, "Modesto Condensed", "Palatino Linotype", serif);
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.window-app.reagent-selection-dialog .reagent-search::placeholder {
+    color: #c9c7b8;
+    font-style: italic;
+}
+
+.window-app.reagent-selection-dialog .reagent-search:focus {
+    outline: none;
+    border-color: #7a7971;
+    background: #252b2c;
+}
+
+/* Style the sort dropdown */
+.window-app.reagent-selection-dialog .sort-select {
+    background: #2e2e2e;
+    color: #f0f0e0;
+    border: 1px solid #4b4a44;
+    border-radius: 3px;
+    padding: 5px;
+    font-family: var(--font-primary, "Modesto Condensed", "Palatino Linotype", serif);
+    font-size: 14px;
+    width: 200px;
+    height: 30px;
+}
+
 /* Style the reagent details (essence and IP values) */
 .window-app.reagent-selection-dialog .reagent-details {
     font-size: 14px;
-    color: #c9c7b8; /* Lighter gray to distinguish from the name */
+    color: #c9c7b8;
     margin-left: 8px;
     white-space: nowrap;
 }
@@ -339,12 +328,12 @@
     margin: 2px 0;
     width: 100%;
     box-sizing: border-box;
-    position: relative; /* Ensure proper event handling */
-    z-index: 10; /* Ensure clickable above other elements */
+    position: relative;
+    z-index: 10;
 }
 
 .window-app.reagent-selection-dialog .reagent-entry:hover {
-    background: #3e3e3e; /* Slightly lighter on hover, matching DnD5e */
+    background: #3e3e3e;
 }
 
 /* Item image styling */
@@ -355,7 +344,7 @@
     border-radius: 3px;
     margin-right: 10px;
     border: 1px solid #4b4a44;
-    flex-shrink: 0; /* Prevent the icon from shrinking */
+    flex-shrink: 0;
 }
 
 /* Item name styling */
@@ -364,10 +353,10 @@
     font-weight: bold;
     color: var(--color-text-light-highlight, #f0f0e0);
     font-family: var(--font-primary, "Modesto Condensed", "Palatino Linotype", serif);
-    flex: 1; /* Allow the name to take up remaining space */
-    overflow: hidden; /* Prevent text overflow */
-    text-overflow: ellipsis; /* Add ellipsis for long names */
-    white-space: nowrap; /* Prevent wrapping */
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* No reagents message */
@@ -378,26 +367,11 @@
     padding: 10px;
 }
 
-/* Center the reagent slots */
-.reagent-triangle {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-}
-
 /* Improve dialog layout */
 .dialog .window-content {
     padding: 0;
     background: #1c2526 !important;
     border: none;
-}
-
-/* Sheet header (custom header inside the dialog) */
-.window-app.reagent-selection-dialog .sheet-header {
-    padding: 8px;
-    text-align: center;
-    height: 100px; /* Reset to natural height */
 }
 
 /* Improve contrast for dialog buttons */
@@ -413,27 +387,17 @@
     background: rgba(255, 255, 255, 0.2);
 }
 
-/* Darken Foundry windows */
-.window-app {
-    background: #1c2526; /* Updated to match DnD5e */
-    border-radius: 5px;
-}
-
-/* Adjust the reagent selection dialog to be 100px */
-.window-app.reagent-selection-dialog .window-content::before {
-    height: 100px !important;
-    pointer-events: none !important;
-}
+/* === Reagent Properties Form Fields === */
 
 /* Style the form fields container to justify reagent properties */
 .form-group.stacked.checkbox-grid .form-fields {
     display: flex;
     flex-wrap: wrap;
-    justify-content: space-between; /* Distribute fields evenly */
+    justify-content: space-between;
     gap: 10px;
 }
 
-/* Style the injected reagent properties fields within the checkbox grid */
+/* Style the injected reagent properties fields */
 .reagent-properties {
     display: inline-flex;
     align-items: center;
@@ -462,4 +426,17 @@
     height: 22px;
     font-size: 30px;
     text-align: center;
+}
+
+/* === Animations === */
+
+@keyframes bubble {
+    0% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+    50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+}
+
+@keyframes flash {
+    0% { background: radial-gradient(circle, rgba(255, 255, 255, 0.5), transparent); }
+    100% { background: radial-gradient(circle, rgba(0, 255, 0, 0.3), transparent); }
 }

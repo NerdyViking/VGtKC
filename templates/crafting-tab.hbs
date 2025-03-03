@@ -20,7 +20,9 @@
                 <p>Select Outcome:</p>
                 <div class="tiebreaker-options">
                     {{#each tiebreakerOutcomes}}
-                        <div class="outcome-icon {{this.category}}-icon {{#if this.selected}}selected{{/if}}" data-category="{{this.category}}" title="{{this.tooltip}}"></div>
+                        <div class="outcome-icon {{this.category}}-icon {{#if this.selected}}selected{{/if}}" 
+                             data-category="{{this.category}}" 
+                             title="{{this.tooltip}}"></div>
                     {{/each}}
                 </div>
             {{else}}
@@ -31,8 +33,16 @@
                 {{/if}}
             {{/if}}
         </div>
-        <button class="craft-btn" disabled>{{#if outcomeKnown}}Craft!{{else}}Experiment!{{/if}}</button>
+        <button class="craft-btn" {{#unless canCraft}}disabled{{/unless}}>{{#if outcomeKnown}}Craft!{{else}}Experiment!{{/if}}</button>
         <button class="clear-slots-btn">Clear Slots</button>
+    </div>
+    <div class="crafting-history">
+        <h3>Known Outcomes</h3>
+        {{#each (lookup @root.actor.flags.vikarovs-guide-to-kaeliduran-crafting "knownCraftingOutcomes")}}
+            <div>
+                <strong>{{@key}}:</strong> {{#each this}}{{this}}, {{/each}}
+            </div>
+        {{/each}}
     </div>
 </div>
 

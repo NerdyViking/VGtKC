@@ -1,27 +1,108 @@
-// hooks.js
 /**
  * Main entry point for Vikarov's Guide to Kaeliduran Crafting.
  * Registers hooks and ties the module together.
  */
-console.log("✅ Hooks.js is loading correctly.");
-
 import { getReagents } from "./utils.js";
 import { ReagentSelectionDialog } from "./reagentSelectionDialog.js";
 import { renderCraftingTab } from "./craftingUI.js";
 import { calculateIPSums, determineOutcome, handleCrafting } from "./reagents.js";
 
-// Modify the loot item sheet to add "Reagent" type and custom fields
+const $ = foundry.utils.jQuery || window.jQuery;
+
+/* === Tab Registration === */
+Hooks.on("dnd5e.getActorSheetData", (data, sheet) => {
+    if (sheet.actor.type !== "character") return;
+    data.tabs = data.tabs || [];
+    data.tabs.push({
+        tab: "crafting",
+        label: "Crafting",
+        icon: '<i class="fas fa-book-open"></i>',
+        active: sheet._activeTab === "crafting"
+    });
+});
+
+/* === Module Initialization === */
+Hooks.once("init", () => {
+    if (!CONFIG.Item) CONFIG.Item = {};
+    if (!CONFIG.Item.type) CONFIG.Item.type = [];
+    if (!CONFIG.Item.type.includes("reagent")) CONFIG.Item.type.push("reagent");
+
+    // Add V2 preRollToolCheck hook to debug the roll configuration
+    Hooks.on("dnd5e.preToolCheckRollConfiguration", (actor, config) => {
+        console.log("Debug: dnd5e.preToolCheckRollConfiguration - Actor:", actor);
+        console.log("Debug: dnd5e.preToolCheckRollConfiguration - Config:", config);
+        console.log("Debug: dnd5e.preToolCheckRollConfiguration - Actor traits:", actor.system.traits);
+        console.log("Debug: dnd5e.preToolCheckRollConfiguration - Actor abilities:", actor.system.abilities);
+        if (config?.data?.tool === "alchemist") {
+            config.ability = config.ability || "int";
+        }
+        return true; // Allow the roll to proceed
+    });
+});
+
+/* === Actor Sheet Rendering === */
+Hooks.on("renderActorSheet", async (app, html, data) => {
+    const actor = app.actor;
+    if (actor.type !== "character" || !(app instanceof ActorSheet) || app._isRendering) return;
+    app._isRendering = true;
+
+    const liveHtml = $(app.element);
+    const sheetBody = liveHtml.find('.sheet-body');
+    const tabs = liveHtml.find('.tabs');
+    if (!sheetBody.length || !tabs.length) {
+        app._isRendering = false;
+        return;
+    }
+
+    if (!tabs.find('[data-tab="crafting"]').length) {
+        tabs.find('.item').last().after('<a class="item" data-tab="crafting"><i class="fas fa-book-open"></i></a>');
+    }
+
+    const mainContent = ensureElement(sheetBody, '.main-content', '<div class="main-content"></div>');
+    const targetTabBody = ensureElement(mainContent, '.tab-body', '<section class="tab-body"></section>');
+    if (!targetTabBody.find('.tab.crafting').length) {
+        targetTabBody.append($('<div class="tab crafting" data-tab="crafting"></div>'));
+    }
+
+    app.craftingState = app.craftingState || { selectedReagents: [null, null, null], selectedOutcome: null };
+
+    const reagentSlotClickHandler = async (event, updateCraftingUI) => {
+        if (event && typeof event.preventDefault === "function") {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        const slotIndex = event.currentTarget.dataset.slot;
+        const actor = game.actors.get(game.user.character?.id);
+        if (!actor) {
+            ui.notifications.error("No valid actor found.");
+            return;
+        }
+
+        const app = Object.values(ui.windows).find(w => w.actor === actor && w instanceof ActorSheet);
+        if (!app?.craftingState) return;
+
+        new ReagentSelectionDialog(actor, async (selectedItem) => {
+            app.craftingState.selectedReagents[slotIndex] = selectedItem;
+            if (updateCraftingUI) await updateCraftingUI();
+        }, app.craftingState.selectedReagents).render(true);
+    };
+
+    await renderCraftingTab(app, liveHtml, data, calculateIPSums, determineOutcome, reagentSlotClickHandler, async () => {
+        await handleCrafting(app, app.craftingState, calculateIPSums, determineOutcome, renderCraftingTab, liveHtml);
+    }, app.updateCraftingUI);
+
+    app._isRendering = false;
+});
+
+/* === Item Sheet Modification === */
 Hooks.on("renderItemSheet", async (app, html, data) => {
     const item = app.object;
     if (item.type !== "loot") return;
 
-    console.log(`🔧 Modifying Item Sheet for: ${item.name}`);
+    app._renderCount = (app._renderCount || 0) + 1;
 
     const lootTypeSelect = html.find('select[name="system.type.value"]');
-    if (!lootTypeSelect.length) {
-        console.warn("⚠️ Loot Type dropdown not found.");
-        return;
-    }
+    if (!lootTypeSelect.length) return;
 
     if (!lootTypeSelect.find('option[value="reagent"]').length) {
         lootTypeSelect.append('<option value="reagent">Reagent</option>');
@@ -29,57 +110,34 @@ Hooks.on("renderItemSheet", async (app, html, data) => {
 
     lootTypeSelect.on("change", async function () {
         const selectedValue = this.value;
-        console.log(`🔄 Loot Type changed to: ${selectedValue}`);
-
         const isReagent = selectedValue === "reagent";
         await item.update({ "system.type.value": selectedValue });
-        await item.setFlag("vikarovs-guide-to-kaeliduran-crafting", "isReagent", isReagent);
-        console.log(`✅ ${item.name} is now a reagent: ${isReagent}`);
-
-        if (isReagent) {
-            removeMagicalCheckbox();
-        }
-
+        await item.setFlag("vikarovs-guide-to-kaeliduran-crafting", "isReagent", isReagent, { render: false });
+        if (isReagent) removeMagicalCheckbox(html);
         app.render(false);
     });
 
     const isReagent = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "isReagent") || false;
-    if (isReagent) {
-        lootTypeSelect.val("reagent");
-    }
+    if (isReagent) lootTypeSelect.val("reagent");
 
     const lootPropertiesGroup = html.find(".form-group.stacked.checkbox-grid");
-    if (!lootPropertiesGroup.length) {
-        console.warn("⚠️ Loot Properties Section Not Found. Fields will not be injected.");
-        return;
-    }
+    if (!lootPropertiesGroup.length) return;
 
     const lootPropertiesLabel = lootPropertiesGroup.find("label").first();
     const lootPropertiesFields = lootPropertiesGroup.find(".form-fields");
-
-    if (!lootPropertiesLabel.length || !lootPropertiesFields.length) {
-        console.warn("⚠️ Loot Properties Label or Fields Not Found. Fields will not be injected.");
-        return;
-    }
-
-    const removeMagicalCheckbox = () => {
-        const magicalCheckbox = lootPropertiesFields.find('label.checkbox').filter(function () {
-            return $(this).text().trim().includes("Magical");
-        });
-        if (magicalCheckbox.length) {
-            magicalCheckbox.remove();
-            console.log("✅ Removed 'Magical' checkbox from Loot Properties.");
-        }
-    };
+    if (!lootPropertiesLabel.length || !lootPropertiesFields.length) return;
 
     if (isReagent) {
-        removeMagicalCheckbox();
+        lootPropertiesLabel.text("Reagent Properties");
+        removeMagicalCheckbox(html);
+    } else {
+        lootPropertiesLabel.text("Loot Properties");
     }
 
     const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
-            if ((mutation.addedNodes.length || mutation.removedNodes.length) && isReagent) {
-                removeMagicalCheckbox();
+            if (isReagent && mutations.some(m => m.addedNodes.length || m.removedNodes.length)) {
+                removeMagicalCheckbox(html);
             }
         });
     });
@@ -87,18 +145,16 @@ Hooks.on("renderItemSheet", async (app, html, data) => {
 
     app.element.on('close', () => {
         observer.disconnect();
+        app._renderCount = 0;
+        const actorSheet = Object.values(ui.windows).find(w => w.actor === item.actor && w instanceof ActorSheet);
+        if (actorSheet) {
+            actorSheet.element.removeClass('editing-item-sheet');
+            if (actorSheet.render && !actorSheet._isRendering) actorSheet.render(true);
+        }
     });
 
-    lootPropertiesFields.find(".reagent-properties").remove();
-
     if (isReagent) {
-        lootPropertiesLabel.text("Reagent Properties");
-        console.log("✅ Updated label to 'Reagent Properties'.");
-    } else {
-        lootPropertiesLabel.text("Loot Properties");
-    }
-
-    if (isReagent) {
+        lootPropertiesFields.find(".reagent-properties").remove();
         const essence = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "essence") || "None";
         const ipValues = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "ipValues") || { combat: 0, utility: 0, entropy: 0 };
         const combatIP = Number(ipValues.combat) || 0;
@@ -121,184 +177,63 @@ Hooks.on("renderItemSheet", async (app, html, data) => {
                 Entropy: <input type="number" name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.entropy" value="${entropyIP}" class="ip-input" />
             </label>
         `;
-
         lootPropertiesFields.append(customHTML);
-        console.log("✅ Injected Reagent Fields into Loot Properties Section.");
 
-        html.find('[name="flags.vikarovs-guide-to-kaeliduran-crafting.essence"]').on("change", async function () {
-            const newEssence = this.value;
-            await item.setFlag("vikarovs-guide-to-kaeliduran-crafting", "essence", newEssence);
-            console.log(`✅ Essence updated to: ${newEssence}`);
+        const actorSheet = Object.values(ui.windows).find(w => w.actor === item.actor && w instanceof ActorSheet);
+        const updateEssence = async (newEssence) => {
+            await item.setFlag("vikarovs-guide-to-kaeliduran-crafting", "essence", newEssence, { render: false });
+            html.find('[name="flags.vikarovs-guide-to-kaeliduran-crafting.essence"]').val(newEssence);
+            if (actorSheet && actorSheet.craftingState && actorSheet.craftingState.selectedReagents.some(r => r && r.id === item.id) && actorSheet.updateCraftingUI && !actorSheet._isUpdatingCraftingUI) {
+                actorSheet._isUpdatingCraftingUI = true;
+                try {
+                    await actorSheet.updateCraftingUI();
+                } finally {
+                    actorSheet._isUpdatingCraftingUI = false;
+                }
+            }
+        };
+
+        const updateIPValues = async (combat, utility, entropy) => {
+            await item.setFlag("vikarovs-guide-to-kaeliduran-crafting", "ipValues", { combat, utility, entropy }, { render: false });
+            html.find('[name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.combat"]').val(combat);
+            html.find('[name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.utility"]').val(utility);
+            html.find('[name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.entropy"]').val(entropy);
+            if (actorSheet && actorSheet.craftingState && actorSheet.craftingState.selectedReagents.some(r => r && r.id === item.id) && actorSheet.updateCraftingUI && !actorSheet._isUpdatingCraftingUI) {
+                actorSheet._isUpdatingCraftingUI = true;
+                try {
+                    await actorSheet.updateCraftingUI();
+                } finally {
+                    actorSheet._isUpdatingCraftingUI = false;
+                }
+            }
+        };
+
+        html.find('[name="flags.vikarovs-guide-to-kaeliduran-crafting.essence"]').off("change").on("change", function () {
+            updateEssence(this.value);
         });
 
-        html.find('[name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.combat"], [name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.utility"], [name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.entropy"]').on("change", async function () {
+        html.find('[name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.combat"], [name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.utility"], [name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.entropy"]').off("change").on("change", async function () {
             const combat = Number(html.find('[name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.combat"]').val()) || 0;
             const utility = Number(html.find('[name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.utility"]').val()) || 0;
             const entropy = Number(html.find('[name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.entropy"]').val()) || 0;
-
-            await item.setFlag("vikarovs-guide-to-kaeliduran-crafting", "ipValues", { combat, utility, entropy });
-            console.log(`✅ IP Values updated to: C:${combat} | U:${utility} | E:${entropy}`);
+            updateIPValues(combat, utility, entropy);
         });
     }
 });
 
-// Initialize module and register "Reagent" as a valid loot type
-Hooks.once("init", () => {
-    console.log("📌 Initializing Vikarov's Guide to Kaeliduran Crafting...");
-
-    console.log("📌 Registering 'Reagent' as a valid loot type...");
-    if (!CONFIG.Item) CONFIG.Item = {};
-    if (!CONFIG.Item.type) CONFIG.Item.type = [];
-    if (!CONFIG.Item.type.includes("reagent")) {
-        CONFIG.Item.type.push("reagent");
-        console.log("✅ 'Reagent' added to valid item types:", CONFIG.Item.type);
-    } else {
-        console.log("🔹 'Reagent' already exists in item types.");
+/* === Helper Functions === */
+function ensureElement(parent, selector, html) {
+    let element = parent.find(selector);
+    if (!element.length) {
+        element = $(html);
+        parent.append(element);
     }
-});
+    return element;
+}
 
-Hooks.once("ready", () => {
-    console.log("Vikarov's Guide to Kaeliduran Crafting | Module is ready");
-});
-
-// Add crafting tab to actor sheets
-Hooks.on("renderActorSheet", async (app, html, data) => {
-    const actor = app.actor;
-    if (actor.type !== "character") {
-        console.log(`Skipping renderActorSheet hook: Actor type is ${actor.type}, expected 'character'.`);
-        return;
-    }
-
-    if (!(app instanceof ActorSheet)) {
-        console.log("Skipping renderActorSheet hook: App is not an instance of ActorSheet.");
-        return;
-    }
-
-    console.log("renderActorSheet hook running for app:", app);
-
-    let retries = 0;
-    const maxRetries = 10;
-    while (retries < maxRetries) {
-        if (app._element && app._element.length && html.find('.sheet-body').length && html.find('.tabs').length) {
-            break;
-        }
-        console.log(`Actor sheet DOM not fully rendered, retry ${retries + 1}/${maxRetries}...`);
-        await new Promise(resolve => setTimeout(resolve, 100));
-        retries++;
-    }
-
-    if (!app._element || !app._element.length || !html.find('.sheet-body').length) {
-        console.warn("Actor sheet DOM not fully rendered after max retries, skipping...");
-        return;
-    }
-
-    console.log("Crafting Tab Hook Fired for:", actor.name);
-
-    const tabs = html.find('.tabs');
-    if (!tabs.length) {
-        console.warn("⚠️ Tabs not found in actor sheet.");
-        return;
-    }
-
-    const tabItems = tabs.find('.item');
-    if (!tabItems.filter(`[data-tab="crafting"]`).length) {
-        console.log("Adding Crafting Tab...");
-        tabItems.last().after(`<a class="item" data-tab="crafting"><i class="fas fa-book"></i></a>`);
-    } else {
-        const craftingContent = html.find('.tab[data-tab="crafting"]');
-        if (!craftingContent.length || !craftingContent.html().trim()) {
-            console.log("Crafting tab exists but content is missing, re-injecting...");
-        } else {
-            return;
-        }
-    }
-
-    const sheetBody = html.find('.sheet-body');
-    if (!sheetBody.length) {
-        console.warn("⚠️ Sheet body not found in actor sheet.");
-        return;
-    }
-
-    app.craftingState = {
-        selectedReagents: [null, null, null],
-        selectedOutcome: null,
-    };
-
-    const reagentSlotClickHandler = async (event, updateCraftingUI) => {
-        event.preventDefault();
-        event.stopPropagation();
-
-        console.log("🔥 Click Event Triggered on Reagent Slot!");
-
-        const slotIndex = event.currentTarget.dataset.slot;
-        console.log(`✅ Click detected on Reagent Slot ${slotIndex}`);
-
-        const actor = game.actors.get(game.user.character?.id);
-        if (!actor) {
-            ui.notifications.error("No valid actor found.");
-            return;
-        }
-
-        const app = Object.values(ui.windows).find(w => w.actor === actor && w instanceof ActorSheet);
-        if (!app || !app.craftingState) {
-            console.error("Could not find actor sheet app or crafting state.");
-            return;
-        }
-
-        const craftingState = app.craftingState;
-        new ReagentSelectionDialog(actor, async (selectedItem) => {
-            console.log(`Selected Reagent: ${selectedItem.name}`);
-            craftingState.selectedReagents[slotIndex] = selectedItem;
-            if (updateCraftingUI) {
-                await updateCraftingUI();
-            } else {
-                console.error("updateCraftingUI function not provided.");
-            }
-        }, craftingState.selectedReagents).render(true);
-    };
-
-    await renderCraftingTab(app, html, data, calculateIPSums, determineOutcome, reagentSlotClickHandler, async () => {
-        await handleCrafting(actor, app.craftingState, calculateIPSums, determineOutcome, renderCraftingTab, html);
-    }, app.updateCraftingUI);
-
-    const tabsItems = html.find('.tabs .item');
-    tabsItems.off("click").on("click", function (e) {
-        e.preventDefault();
-        const tabName = this.dataset.tab;
-        console.log(`Switching to tab: ${tabName}`);
-
-        tabsItems.removeClass("active");
-        sheetBody.find('.tab').removeClass("active").hide();
-
-        $(this).addClass("active");
-        const targetTab = sheetBody.find(`.tab[data-tab="${tabName}"]`);
-        if (targetTab.length) {
-            targetTab.addClass("active").css('display', 'flex');
-            console.log(`Tab ${tabName} set to active and visible. Display: ${targetTab.css('display')}`);
-        } else {
-            console.warn(`Tab content for ${tabName} not found in DOM.`);
-        }
+function removeMagicalCheckbox(html) {
+    const magicalCheckbox = html.find('.form-fields label.checkbox').filter(function () {
+        return $(this).text().trim().includes("Magical");
     });
-
-    const activeTab = tabsItems.filter('.active');
-    if (activeTab.length) {
-        const tabName = activeTab.data('tab');
-        console.log(`Initial active tab on render: ${tabName}`);
-        const targetTab = sheetBody.find(`.tab[data-tab="${tabName}"]`);
-        if (targetTab.length) {
-            targetTab.addClass("active").css('display', 'flex');
-            console.log(`Initial tab ${tabName} set to active and visible. Display: ${targetTab.css('display')}`);
-        }
-    } else {
-        const firstTab = tabsItems.first();
-        if (firstTab.length) {
-            const tabName = firstTab.data('tab');
-            firstTab.addClass("active");
-            const targetTab = sheetBody.find(`.tab[data-tab="${tabName}"]`);
-            if (targetTab.length) {
-                targetTab.addClass("active").css('display', 'flex');
-                console.log(`Defaulted to first tab ${tabName} on initial render.`);
-            }
-        }
-    }
-});
+    if (magicalCheckbox.length) magicalCheckbox.remove();
+}
