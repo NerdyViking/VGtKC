@@ -25,7 +25,21 @@ export async function renderCraftingTab(app, html, data, calculateIPSums, determ
         const templateData = { ...data, ipSums, ...outcomeData, canCraft, selectedReagents: craftingState.selectedReagents };
         const mainContent = ensureElement(sheetBody, '.main-content', '<div class="main-content"></div>');
         const targetTabBody = ensureElement(mainContent, '.tab-body', '<section class="tab-body"></section>');
-        const craftingTabContent = ensureElement(targetTabBody, '.tab.crafting', '<div class="tab crafting" data-tab="crafting"></div>');
+        let craftingTabContent = targetTabBody.find('.tab.crafting');
+
+        // Ensure the crafting tab content exists
+        if (!craftingTabContent.length) {
+            craftingTabContent = $(`<div class="tab crafting" data-tab="crafting"></div>`);
+            targetTabBody.append(craftingTabContent);
+        }
+
+        // Preserve the active class if the crafting tab is currently active
+        const isCraftingTabActive = app._tabs[0]?.active === "crafting";
+        if (isCraftingTabActive) {
+            craftingTabContent.addClass('active');
+        }
+        console.log("Debug: updateCraftingUI - Is crafting tab active?", isCraftingTabActive);
+        console.log("Debug: updateCraftingUI - Crafting tab classes after update:", craftingTabContent.attr('class'));
 
         const craftingHTML = await renderTemplate(templatePath, templateData);
         craftingTabContent.html(craftingHTML);
@@ -50,6 +64,14 @@ export async function renderCraftingTab(app, html, data, calculateIPSums, determ
         craftingTabContent = $(`<div class="tab crafting" data-tab="crafting"></div>`);
         targetTabBody.append(craftingTabContent);
     }
+
+    // Ensure the active class is set on initial render if the crafting tab is active
+    const isCraftingTabActive = app._tabs[0]?.active === "crafting";
+    if (isCraftingTabActive) {
+        craftingTabContent.addClass('active');
+    }
+    console.log("Debug: renderCraftingTab - Is crafting tab active on initial render?", isCraftingTabActive);
+    console.log("Debug: renderCraftingTab - Crafting tab classes on initial render:", craftingTabContent.attr('class'));
 
     const craftingHTML = await renderTemplate(templatePath, templateData);
     craftingTabContent.html(craftingHTML);

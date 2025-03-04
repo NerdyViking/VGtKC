@@ -165,36 +165,23 @@ export async function handleCrafting(app, craftingState, calculateIPSums, determ
         return;
     }
 
-    // Trigger the roll and capture the result via a hook
+    // Trigger the roll and capture the result directly from rollToolCheck
     console.log("Debug: Triggering toolItem.rollToolCheck with options:", options);
-    const rollTotal = await new Promise((resolve, reject) => {
-      const hookId = Hooks.once("createChatMessage", (chatMessage) => {
-        if (
-          chatMessage.speaker.actor === actor.id &&
-          chatMessage.rolls?.length > 0 &&
-          chatMessage.flags?.dnd5e?.roll?.type === "tool" &&
-          chatMessage.flavor?.includes("Alchemist's Supplies")
-        ) {
-          resolve(chatMessage.rolls[0].total);
-        }
-      });
-
-      toolItem.rollToolCheck(options)
-        .catch(err => {
-          Hooks.off("createChatMessage", hookId);
-          reject(err);
-        });
-
-      // Fallback cleanup if roll is canceled or fails to trigger
-      setTimeout(() => {
-        Hooks.off("createChatMessage", hookId);
-        reject(new Error("Tool check roll timed out"));
-      }, 5000);
-    }).catch(err => {
+    let rollTotal = null;
+    try {
+      const rollResult = await toolItem.rollToolCheck(options);
+      console.log("Debug: rollToolCheck result:", rollResult);
+      if (rollResult && Array.isArray(rollResult) && rollResult.length > 0 && rollResult[0]?.total != null) {
+        rollTotal = rollResult[0].total;
+        console.log("Debug: Roll total from rollToolCheck:", rollTotal);
+      } else {
+        throw new Error("Invalid roll result returned from rollToolCheck.");
+      }
+    } catch (err) {
       ui.notifications.error(`Failed to determine tool check result: ${err.message}`);
       console.error("Debug: Tool check error:", err);
-      return null;
-    });
+      return;
+    }
 
     if (rollTotal === null) return;
 
