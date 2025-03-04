@@ -1,15 +1,35 @@
 /**
  * Handles rendering and updating the Crafting tab UI.
  */
+import { CraftingCompendium } from "./craftingCompendium.js";
+
 export async function renderCraftingTab(app, html, data, calculateIPSums, determineOutcome, reagentSlotClickHandler, handleCrafting, updateCraftingUIExternal) {
     const actor = app.actor;
     const $ = foundry.utils.jQuery || window.jQuery;
     const liveHtml = $(app.element);
     const sheetBody = liveHtml.find('.sheet-body');
     const craftingState = app.craftingState;
+    craftingState.actor = actor; // Ensure the actor is available in the crafting state
     const templatePath = "modules/vikarovs-guide-to-kaeliduran-crafting/templates/crafting-tab.hbs";
 
     if (!sheetBody.length) return;
+
+    const mainContent = ensureElement(sheetBody, '.main-content', '<div class="main-content"></div>');
+    const targetTabBody = ensureElement(mainContent, '.tab-body', '<section class="tab-body"></section>');
+    let craftingTabContent = targetTabBody.find('.tab.crafting');
+
+    if (!craftingTabContent.length) {
+        craftingTabContent = $(`<div class="tab crafting" data-tab="crafting"></div>`);
+        targetTabBody.append(craftingTabContent);
+    }
+
+    // Ensure the active class is set on initial render if the crafting tab is active
+    const isCraftingTabActive = app._tabs[0]?.active === "crafting";
+    if (isCraftingTabActive) {
+        craftingTabContent.addClass('active');
+    }
+    console.log("Debug: renderCraftingTab - Is crafting tab active on initial render?", isCraftingTabActive);
+    console.log("Debug: renderCraftingTab - Crafting tab classes on initial render:", craftingTabContent.attr('class'));
 
     /* === UI Update Logic === */
     const updateCraftingUI = async () => {
@@ -56,23 +76,6 @@ export async function renderCraftingTab(app, html, data, calculateIPSums, determ
     const canCraft = allSlotsFilled && craftingState.selectedReagents.length === 3 && (!outcomeData.hasTiebreaker || craftingState.selectedOutcome);
 
     const templateData = { ...data, ipSums, ...outcomeData, canCraft, selectedReagents: craftingState.selectedReagents };
-    const mainContent = ensureElement(sheetBody, '.main-content', '<div class="main-content"></div>');
-    const targetTabBody = ensureElement(mainContent, '.tab-body', '<section class="tab-body"></section>');
-    let craftingTabContent = targetTabBody.find('.tab.crafting');
-
-    if (!craftingTabContent.length) {
-        craftingTabContent = $(`<div class="tab crafting" data-tab="crafting"></div>`);
-        targetTabBody.append(craftingTabContent);
-    }
-
-    // Ensure the active class is set on initial render if the crafting tab is active
-    const isCraftingTabActive = app._tabs[0]?.active === "crafting";
-    if (isCraftingTabActive) {
-        craftingTabContent.addClass('active');
-    }
-    console.log("Debug: renderCraftingTab - Is crafting tab active on initial render?", isCraftingTabActive);
-    console.log("Debug: renderCraftingTab - Crafting tab classes on initial render:", craftingTabContent.attr('class'));
-
     const craftingHTML = await renderTemplate(templatePath, templateData);
     craftingTabContent.html(craftingHTML);
 
@@ -84,7 +87,7 @@ export async function renderCraftingTab(app, html, data, calculateIPSums, determ
         if (mutations.some(m => m.removedNodes.length || m.addedNodes.length)) {
             const checkContent = targetTabBody.find('.tab.crafting');
             if (!checkContent.length || !checkContent.children().length) {
-                const newCraftingTabContent = $(`<div class="tab crafting" data-tab="crafting"></div>`);
+                const newCraftingTabContent = $(`<div class="tab crafting" data-tab="crafting"><div class="loading-spinner">Loading Crafting UI...</div></div>`);
                 newCraftingTabContent.html(craftingHTML);
                 targetTabBody.append(newCraftingTabContent);
                 bindEventHandlers(newCraftingTabContent, craftingState, reagentSlotClickHandler, handleCrafting, updateCraftingUI);
@@ -118,5 +121,14 @@ function bindEventHandlers(craftingTabContent, craftingState, reagentSlotClickHa
         craftingState.selectedReagents = [null, null, null];
         craftingState.selectedOutcome = null;
         setTimeout(() => updateCraftingUI(), 0);
+    });
+    const $openCompendiumBtn = craftingTabContent.find('.open-compendium-btn');
+    $openCompendiumBtn.html('<span>Ask Vikarov</span><i class="fas fa-book"></i>'); // Add text and keep icon
+    $openCompendiumBtn.off("click").on("click", () => {
+        if (!craftingState.actor) {
+            ui.notifications.error("No valid actor found to open the Crafting Compendium.");
+            return;
+        }
+        new CraftingCompendium(craftingState.actor).render(true);
     });
 }

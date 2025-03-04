@@ -246,9 +246,20 @@ export async function handleCrafting(app, craftingState, calculateIPSums, determ
         Entropy: knownOutcomes.Entropy || []
     };
 
-    if (!knownOutcomes[categoryKey].includes(finalSum)) {
-        knownOutcomes[categoryKey] = [...knownOutcomes[categoryKey], finalSum];
+    // Update known outcomes with the consumable item ID
+    if (!knownOutcomes[categoryKey].some(entry => (typeof entry === "number" && entry === finalSum) || (entry.sum === finalSum))) {
+        const createdItems = await actor.createEmbeddedDocuments("Item", [consumableData]);
+        console.log("Debug: Created items:", createdItems);
+        ui.notifications.info(`You crafted ${quantity} ${consumableName}(s)!`);
+
+        // Store the item ID with the sum
+        const newEntry = { sum: finalSum, itemId: createdItems[0].id };
+        knownOutcomes[categoryKey] = [...knownOutcomes[categoryKey], newEntry];
         await actor.setFlag("vikarovs-guide-to-kaeliduran-crafting", "knownCraftingOutcomes", knownOutcomes);
+    } else {
+        const createdItems = await actor.createEmbeddedDocuments("Item", [consumableData]);
+        console.log("Debug: Created items:", createdItems);
+        ui.notifications.info(`You crafted ${quantity} ${consumableName}(s)!`);
     }
 
     try {

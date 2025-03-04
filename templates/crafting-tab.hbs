@@ -37,12 +37,9 @@
         <button class="clear-slots-btn">Clear Slots</button>
     </div>
     <div class="crafting-history">
-        <h3>Known Outcomes</h3>
-        {{#each (lookup @root.actor.flags.vikarovs-guide-to-kaeliduran-crafting "knownCraftingOutcomes")}}
-            <div>
-                <strong>{{@key}}:</strong> {{#each this}}{{this}}, {{/each}}
-            </div>
-        {{/each}}
+        <button class="open-compendium-btn" title="Open Vikarov's Crafting Compendium">
+            <i class="fas fa-book"></i>
+        </button>
     </div>
 </div>
 

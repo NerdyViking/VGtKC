@@ -12,9 +12,15 @@
     "main.js",
     "scripts/hooks.js",
     "scripts/reagentSelectionDialog.js",
+    "scripts/craftingCompendium.js",
     "scripts/craftingUI.js",
     "scripts/reagents.js",
     "scripts/utils.js"
+  ],
+  "templates": [
+    "templates/crafting-tab.hbs",
+    "templates/reagent-selection.hbs",
+    "templates/crafting-compendium.hbs"
   ],
   "styles": [
     "styles.css"

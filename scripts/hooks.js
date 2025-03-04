@@ -4,6 +4,7 @@
  */
 import { getReagents } from "./utils.js";
 import { ReagentSelectionDialog } from "./reagentSelectionDialog.js";
+import { CraftingCompendium } from "./craftingCompendium.js";
 import { renderCraftingTab } from "./craftingUI.js";
 import { calculateIPSums, determineOutcome, handleCrafting } from "./reagents.js";
 

@@ -15,3 +15,4 @@ Hooks.on("renderActorSheet", (app, html, data) => {
 });
 
 import "./scripts/hooks.js";
+import "./scripts/craftingCompendium.js";
