@@ -1,27 +1,5 @@
 /* === General Crafting Styles === */
 
-/* Ensure tab content only appears when active */
-.sheet-body .main-content .tab-body .tab.crafting {
-    display: flex !important;
-    visibility: visible !important;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-}
-
-
-/* Show the tab content when the Crafting tab is active */
-.sheet-body .tab[data-tab="crafting"].active .main-content .tab-body .tab.crafting {
-    display: flex !important;
-    visibility: visible !important;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    width: 100%;
-    padding: 10px;
-    box-sizing: border-box;
-}
-
 /* Center .alchemy-crafting within .main-content .tab-body .tab.crafting */
 .sheet-body .main-content .tab-body .tab.crafting .alchemy-crafting {
     display: block !important;
@@ -30,8 +8,6 @@
     text-align: center !important;
     width: fit-content !important;
     max-width: 100%;
-    /* Debugging: Add a border to visualize the .alchemy-crafting area */
-    border: 2px dashed red;
 }
 
 /* Ensure the cauldron image is centered within .alchemy-crafting */
@@ -49,7 +25,7 @@
     height: 400px;
     background: url('./assets/cauldron.webp') center center no-repeat;
     background-size: contain;
-    opacity: 0.1;
+    opacity: 1.0;
 }
 
 /* Animate cauldron when all slots are filled */
@@ -151,19 +127,19 @@
 }
 
 .combat-icon {
-    background: url('path/to/combat-icon.png') center center no-repeat;
+    background: url('assets/combat-icon.jpg') center center no-repeat;
     background-size: contain;
     background-color: rgba(255, 0, 0, 0.2);
 }
 
 .utility-icon {
-    background: url('path/to/utility-icon.png') center center no-repeat;
+    background: url('assets/utility-icon.jpg') center center no-repeat;
     background-size: contain;
     background-color: rgba(0, 0, 255, 0.2);
 }
 
 .entropy-icon {
-    background: url('path/to/entropy-icon.png') center center no-repeat;
+    background: url('assets/question-mark-removebg-preview.png') center center no-repeat;
     background-size: contain;
     background-color: rgba(128, 0, 128, 0.2);
 }
@@ -439,4 +415,24 @@
 @keyframes flash {
     0% { background: radial-gradient(circle, rgba(255, 255, 255, 0.5), transparent); }
     100% { background: radial-gradient(circle, rgba(0, 255, 0, 0.3), transparent); }
+}
+
+/* === Crafting Tab Visibility === */
+
+/* Hide the crafting tab content by default */
+.sheet-body .main-content .tab-body .tab.crafting {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+/* Show the crafting tab content only when the Crafting tab is active */
+.sheet-body .main-content .tab-body .tab[data-tab="crafting"].active {
+    display: flex !important;
+    visibility: visible !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    padding: 10px;
+    box-sizing: border-box;
 }

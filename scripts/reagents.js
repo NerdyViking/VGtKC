@@ -165,26 +165,38 @@ export async function handleCrafting(app, craftingState, calculateIPSums, determ
         return;
     }
 
-    // Trigger the roll and wait for the chat message to populate
+    // Trigger the roll and capture the result via a hook
     console.log("Debug: Triggering toolItem.rollToolCheck with options:", options);
-    await toolItem.rollToolCheck(options);
+    const rollTotal = await new Promise((resolve, reject) => {
+      const hookId = Hooks.once("createChatMessage", (chatMessage) => {
+        if (
+          chatMessage.speaker.actor === actor.id &&
+          chatMessage.rolls?.length > 0 &&
+          chatMessage.flags?.dnd5e?.roll?.type === "tool" &&
+          chatMessage.flavor?.includes("Alchemist's Supplies")
+        ) {
+          resolve(chatMessage.rolls[0].total);
+        }
+      });
 
-    // Add a small delay to allow the chat message to populate
-    await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+      toolItem.rollToolCheck(options)
+        .catch(err => {
+          Hooks.off("createChatMessage", hookId);
+          reject(err);
+        });
 
-    // Fetch the most recent chat message with the flavor "Alchemist's Supplies"
-    const messages = game.messages.filter(msg => msg.flavor?.includes("Alchemist's Supplies"));
-    const latestMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+      // Fallback cleanup if roll is canceled or fails to trigger
+      setTimeout(() => {
+        Hooks.off("createChatMessage", hookId);
+        reject(new Error("Tool check roll timed out"));
+      }, 5000);
+    }).catch(err => {
+      ui.notifications.error(`Failed to determine tool check result: ${err.message}`);
+      console.error("Debug: Tool check error:", err);
+      return null;
+    });
 
-    let rollTotal = null;
-    if (latestMessage && latestMessage.rolls && latestMessage.rolls.length > 0) {
-        rollTotal = latestMessage.rolls[0].total;
-        console.log("Debug: Roll total from chat message:", rollTotal);
-    } else {
-        ui.notifications.error("Failed to determine tool check result. No chat message found.");
-        console.error("Debug: No chat message found for Alchemist's Supplies roll.");
-        return;
-    }
+    if (rollTotal === null) return;
 
     console.log("Debug: Roll total after processing:", rollTotal, "DC:", dc);
     if (rollTotal === null) {
