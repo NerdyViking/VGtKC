@@ -1,6 +1,6 @@
 /* === General Crafting Styles === */
 
-/* Center .alchemy-crafting within .main-content .tab-body .tab.crafting */
+/* Center alchemy-crafting within its container */
 .sheet-body .main-content .tab-body .tab.crafting .alchemy-crafting {
     display: block !important;
     margin-left: auto !important;
@@ -10,7 +10,7 @@
     max-width: 100%;
 }
 
-/* Ensure the cauldron image is centered within .alchemy-crafting */
+/* Center cauldron image */
 .alchemy-crafting img {
     display: block;
     margin: 0 auto;
@@ -28,24 +28,28 @@
     opacity: 1.0;
 }
 
-/* Animate cauldron when all slots are filled */
-.cauldron-container.ready .reagent-triangle::after {
+/* Animation effects for cauldron */
+.cauldron-container.ready .reagent-triangle::after,
+.cauldron-container.crafting .reagent-triangle::after {
     content: '';
     position: absolute;
     top: 50%;
     left: 50%;
     width: 80%;
     height: 80%;
+    transform: translate(-50%, -50%);
+}
+
+.cauldron-container.ready .reagent-triangle::after {
     background: radial-gradient(circle, rgba(0, 255, 0, 0.3), transparent);
     animation: bubble 2s infinite;
 }
 
-/* Flash animation on craft */
 .cauldron-container.crafting .reagent-triangle::after {
     animation: flash 0.5s;
 }
 
-/* Position reagent slots in a triangle */
+/* Reagent triangle layout */
 .reagent-triangle {
     position: absolute;
     top: 0;
@@ -57,26 +61,7 @@
     align-items: center;
 }
 
-.reagent-slot[data-slot="0"] {
-    position: absolute;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-.reagent-slot[data-slot="1"] {
-    position: absolute;
-    bottom: 10px;
-    left: 20px;
-}
-
-.reagent-slot[data-slot="2"] {
-    position: absolute;
-    bottom: 10px;
-    right: 20px;
-}
-
-/* Make reagent slots larger, visible, and interactive */
+/* Position individual reagent slots */
 .reagent-slot {
     width: 50px;
     height: 50px;
@@ -99,22 +84,37 @@
     background: rgba(255, 255, 255, 0.1);
 }
 
+.reagent-slot[data-slot="0"] {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.reagent-slot[data-slot="1"] {
+    position: absolute;
+    bottom: 10px;
+    left: 20px;
+}
+
+.reagent-slot[data-slot="2"] {
+    position: absolute;
+    bottom: 10px;
+    right: 20px;
+}
+
 /* === Crafting UI Elements === */
 
-/* Style IP display */
-.ip-display {
+/* IP and outcome displays */
+.ip-display,
+.outcome-display {
     text-align: center;
-    margin-top: 10px;
+    margin: 10px 0;
 }
 
 .ip-values {
     font-weight: bold;
     color: #f0f0e0;
-}
-
-/* Outcome display */
-.outcome-display {
-    margin: 10px 0;
 }
 
 .outcome-icon {
@@ -126,27 +126,25 @@
     cursor: pointer;
 }
 
-.combat-icon {
-    background: url('assets/combat-icon.jpg') center center no-repeat;
-    background-size: contain;
+.outcome-icon.combat-icon {
     background-color: rgba(255, 0, 0, 0.2);
 }
 
-.utility-icon {
-    background: url('assets/utility-icon.jpg') center center no-repeat;
-    background-size: contain;
+.outcome-icon.utility-icon {
     background-color: rgba(0, 0, 255, 0.2);
 }
 
-.entropy-icon {
-    background: url('assets/question-mark-removebg-preview.png') center center no-repeat;
-    background-size: contain;
+.outcome-icon.entropy-icon {
     background-color: rgba(128, 0, 128, 0.2);
 }
 
-.unknown-icon {
-    background: url('assets/question-mark.png') center center no-repeat;
-    background-size: contain;
+.outcome-icon.unknown-icon {
+    background-color: rgba(128, 128, 128, 0.2);
+    content: "?";
+    line-height: 36px;
+    text-align: center;
+    font-size: 24px;
+    color: #c9c7b8;
 }
 
 .outcome-icon.selected {
@@ -194,7 +192,7 @@
 
 /* === Reagent Selection Dialog === */
 
-/* Apply DnD5e item sheet styles to the dialog */
+/* Dialog base styling */
 .window-app.reagent-selection-dialog {
     color: var(--color-text-light-highlight, #f0f0e0);
     box-sizing: border-box;
@@ -202,20 +200,25 @@
     border-radius: 5px;
 }
 
-/* Window header */
+/* Restrict dark background to reagent selection dialog content */
+.window-app.reagent-selection-dialog .window-content {
+    padding: 0;
+    background: #1c2526;
+    border: none;
+}
+
+/* Header and title */
 .window-app.reagent-selection-dialog .window-header {
     padding: 5px;
     color: #ffffff;
 }
 
-/* Sheet header */
 .window-app.reagent-selection-dialog .sheet-header {
     padding: 8px;
     text-align: center;
     height: 100px;
 }
 
-/* Title text */
 .window-app.reagent-selection-dialog .sheet-header h1 {
     font-size: 22px;
     font-weight: bold;
@@ -224,18 +227,17 @@
     margin: 0;
 }
 
-/* Reagent selection content */
+/* Content and search bar */
 .window-app.reagent-selection-dialog .sheet-content {
     padding: 8px;
     flex: 1;
     overflow: auto;
     min-height: 200px;
-    width: calc(100% - 2px);
+    width: 100%;
     box-sizing: border-box;
     background: transparent;
 }
 
-/* Search bar styling */
 .window-app.reagent-selection-dialog .search-bar {
     padding: 8px;
     background: #2e2e2e;
@@ -246,7 +248,6 @@
     flex-wrap: wrap;
 }
 
-/* Reagent search input */
 .window-app.reagent-selection-dialog .reagent-search {
     width: 100%;
     padding: 5px 8px;
@@ -270,7 +271,6 @@
     background: #252b2c;
 }
 
-/* Style the sort dropdown */
 .window-app.reagent-selection-dialog .sort-select {
     background: #2e2e2e;
     color: #f0f0e0;
@@ -283,15 +283,7 @@
     height: 30px;
 }
 
-/* Style the reagent details (essence and IP values) */
-.window-app.reagent-selection-dialog .reagent-details {
-    font-size: 14px;
-    color: #c9c7b8;
-    margin-left: 8px;
-    white-space: nowrap;
-}
-
-/* Properly size and space the reagent list */
+/* Reagent entries */
 .window-app.reagent-selection-dialog .reagent-entry {
     display: flex;
     align-items: center;
@@ -312,7 +304,6 @@
     background: #3e3e3e;
 }
 
-/* Item image styling */
 .window-app.reagent-selection-dialog .item-icon {
     width: 36px;
     height: 36px;
@@ -323,7 +314,6 @@
     flex-shrink: 0;
 }
 
-/* Item name styling */
 .window-app.reagent-selection-dialog .reagent-name {
     font-size: 16px;
     font-weight: bold;
@@ -335,7 +325,13 @@
     white-space: nowrap;
 }
 
-/* No reagents message */
+.window-app.reagent-selection-dialog .reagent-details {
+    font-size: 14px;
+    color: #c9c7b8;
+    margin-left: 8px;
+    white-space: nowrap;
+}
+
 .window-app.reagent-selection-dialog .no-reagents {
     text-align: center;
     color: var(--color-text-light-6, #c9c7b8);
@@ -343,15 +339,8 @@
     padding: 10px;
 }
 
-/* Improve dialog layout */
-.dialog .window-content {
-    padding: 0;
-    background: #1c2526 !important;
-    border: none;
-}
-
-/* Improve contrast for dialog buttons */
-.dialog button {
+/* Dialog buttons (specific to reagent selection) */
+.window-app.reagent-selection-dialog button {
     background: rgba(0, 0, 0, 0.6);
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -359,13 +348,13 @@
     cursor: pointer;
 }
 
-.dialog button:hover {
+.window-app.reagent-selection-dialog button:hover {
     background: rgba(255, 255, 255, 0.2);
 }
 
 /* === Reagent Properties Form Fields === */
 
-/* Style the form fields container to justify reagent properties */
+/* Form fields layout */
 .form-group.stacked.checkbox-grid .form-fields {
     display: flex;
     flex-wrap: wrap;
@@ -373,14 +362,12 @@
     gap: 10px;
 }
 
-/* Style the injected reagent properties fields */
 .reagent-properties {
     display: inline-flex;
     align-items: center;
     gap: 5px;
 }
 
-/* Style the Essence dropdown */
 .reagent-properties .essence-select {
     background: #2e2e2e;
     color: #f0f0e0;
@@ -391,7 +378,6 @@
     font-size: 30px;
 }
 
-/* Style the IP input fields */
 .reagent-properties .ip-input {
     background: #2e2e2e;
     color: #f0f0e0;
@@ -417,87 +403,73 @@
     100% { background: radial-gradient(circle, rgba(0, 255, 0, 0.3), transparent); }
 }
 
-/* === Crafting Tab Visibility === */
-
-/* Hide the crafting tab content by default */
-.sheet-body .main-content .tab-body .tab.crafting {
-    display: none !important;
-    visibility: hidden !important;
-}
-
-/* Show the crafting tab content only when the Crafting tab is active */
-.sheet-body .main-content .tab-body .tab[data-tab="crafting"].active {
-    display: flex !important;
-    visibility: visible !important;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    width: 100%;
-    padding: 10px;
-    box-sizing: border-box;
-}
 /* === Crafting Compendium Styles === */
 
-/* Tab navigation (minor adjustments to match default sheet) */
+/* --- General Layout and Structure --- */
+.window-app.crafting-compendium .sheet-header h1.charname {
+    text-align: center;
+    width: 100%;
+    position: relative;
+}
+
+.window-app.crafting-compendium .window-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 5px;
+}
+
+.window-app.crafting-compendium .window-header a.header-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    margin-left: 5px;
+    padding: 0;
+}
+
+.window-app.crafting-compendium .window-header a.header-button i {
+    margin: 0;
+}
+
+/* --- Tab Navigation --- */
+.window-app.crafting-compendium .compendium-tabs .item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+}
+
 .window-app.crafting-compendium .compendium-tabs .item i {
     margin-right: 5px;
+    text-indent: 0; /* Ensure icons are not indented */
 }
 
-.window-app.crafting-compendium .compendium-tabs .item[data-tab="combat"] i {
-    color: #ff5555;
-}
-
-.window-app.crafting-compendium .compendium-tabs .item[data-tab="utility"] i {
-    color: #55ff55;
-}
-
-.window-app.crafting-compendium .compendium-tabs .item[data-tab="entropy"] i {
-    color: #aa00ff;
-}
-
-/* Tab icon size */
+.window-app.crafting-compendium .compendium-tabs .item img,
 .window-app.crafting-compendium .compendium-tabs .tab-icon {
     width: 24px;
     height: 24px;
     vertical-align: middle;
 }
 
-/* Hide text in tab navigation */
-.window-app.crafting-compendium .compendium-tabs .item {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px; /* Adjust width to fit icons */
-    height: 24px; /* Adjust height to fit icons */
+.window-app.crafting-compendium .compendium-tabs .item[data-tab="combat"] i {
+    color: #ff5555;
+    border: 2px solid rgba(255, 85, 85, 0.3);
 }
 
-/* Ensure icons are visible */
-.window-app.crafting-compendium .compendium-tabs .item img,
-.window-app.crafting-compendium .compendium-tabs .item i {
-    margin: 0;
-    text-indent: 0; /* Override text-indent for icons */
+.window-app.crafting-compendium .compendium-tabs .item[data-tab="utility"] i {
+    color: #55ff55;
+    border: 2px solid rgba(85, 255, 85, 0.3);
 }
 
-/* Ensure the title is centered */
-.window-app.crafting-compendium .sheet-header h1.charname {
-    text-align: center;
-    width: 100%;
+.window-app.crafting-compendium .compendium-tabs .item[data-tab="entropy"] i {
+    color: #aa00ff;
+    border: 2px solid rgba(170, 0, 255, 0.3);
 }
 
-/* Tab content borders */
-.window-app.crafting-compendium .compendium-tabs .item[data-tab="combat"] {
-    border: 2px solid rgba(255, 85, 85, 0.3); /* Red with 0.3 opacity */
-}
-
-.window-app.crafting-compendium .compendium-tabs .item[data-tab="utility"] {
-    border: 2px solid rgba(85, 255, 85, 0.3); /* Green with 0.3 opacity */
-}
-
-.window-app.crafting-compendium .compendium-tabs .item[data-tab="entropy"] {
-    border: 2px solid rgba(170, 0, 255, 0.3); /* Purple with 0.3 opacity */
-}
-
-/* Rarity rows */
+/* --- Rarity Layout --- */
 .window-app.crafting-compendium .rarity-row {
     display: flex;
     flex-wrap: wrap;
@@ -505,7 +477,6 @@
     margin-bottom: 20px;
 }
 
-/* Rarity groups */
 .window-app.crafting-compendium .rarity-group {
     padding: 10px;
 }
@@ -520,7 +491,6 @@
     min-width: 200px;
 }
 
-/* Rarity labels */
 .window-app.crafting-compendium .rarity-label {
     font-size: 24px;
     font-weight: bold;
@@ -530,7 +500,7 @@
     font-family: var(--font-primary, "Modesto Condensed", "Palatino Linotype", serif);
 }
 
-/* Rarity group borders */
+/* --- Rarity Group Borders --- */
 .window-app.crafting-compendium .common-group {
     border: 2px solid #000000;
 }
@@ -551,46 +521,41 @@
     border: 2px solid #ffa500;
 }
 
-/* Grid layouts */
-.window-app.crafting-compendium .outcomes-grid.common-grid {
+/* --- Grid Layouts --- */
+.window-app.crafting-compendium .outcomes-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
 }
 
-.window-app.crafting-compendium .outcomes-grid.uncommon-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-}
-
-.window-app.crafting-compendium .outcomes-grid.rare-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-}
-
+.window-app.crafting-compendium .outcomes-grid.common-grid,
+.window-app.crafting-compendium .outcomes-grid.uncommon-grid,
+.window-app.crafting-compendium .outcomes-grid.rare-grid,
 .window-app.crafting-compendium .outcomes-grid.veryRare-grid {
-    display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
 }
 
 .window-app.crafting-compendium .outcomes-grid.legendary-grid {
-    display: grid;
     grid-template-columns: 1fr;
-    gap: 10px;
 }
 
-/* Outcome cells */
+/* --- Outcome Cells and Icons --- */
 .window-app.crafting-compendium .outcome-cell {
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
+    position: relative;
 }
 
-/* Outcome icons */
+.window-app.crafting-compendium .item-icon {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    border: 1px solid #4b4a44;
+    border-radius: 3px;
+    margin-bottom: 5px;
+}
+
 .window-app.crafting-compendium .outcome-icon {
     width: 36px;
     height: 36px;
@@ -598,45 +563,45 @@
     border: 1px solid #4b4a44;
     border-radius: 3px;
     cursor: default;
+    line-height: 36px;
+    text-align: center;
+    font-size: 24px;
+    color: #c9c7b8;
 }
 
 .window-app.crafting-compendium .unknown-icon {
-    background: url('assets/question-mark.png') center center no-repeat;
-    background-size: contain;
+    background: rgba(128, 128, 128, 0.2); /* Gray background */
+    content: "?";
 }
 
 .window-app.crafting-compendium .known-icon {
-    background: url('assets/book-icon.png') center center no-repeat;
-    background-size: contain;
-    background-color: rgba(255, 215, 0, 0.2);
+    background: rgba(255, 215, 0, 0.2); /* Gold background */
+    content: "📖"; /* Book emoji */
 }
 
 .window-app.crafting-compendium .consumable-link {
-    background: url('assets/potion-icon.png') center center no-repeat;
-    background-size: contain;
-    background-color: rgba(0, 128, 255, 0.2);
     cursor: pointer;
+    display: block;
 }
 
 .window-app.crafting-compendium .consumable-link:hover {
-    background-color: rgba(0, 128, 255, 0.4);
+    background-color: rgba(0, 128, 255, 0.2); /* Light blue hover effect */
 }
 
-/* Outcome sum */
 .window-app.crafting-compendium .outcome-sum {
     font-size: 12px;
     color: #c9c7b8;
     margin-top: 5px;
 }
 
-/* Closed book button */
+/* --- Buttons and Interactive Elements --- */
 .open-compendium-btn {
     background: none;
     border: none;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 8px; /* Space between text and icon */
+    gap: 8px;
     padding: 5px;
 }
 
@@ -653,34 +618,33 @@
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-.open-compendium-btn:hover span {
-    color: #ffd700;
-}
-
+.open-compendium-btn:hover span,
 .open-compendium-btn:hover i {
     color: #ffd700;
 }
 
-/* Ensure the header buttons are properly spaced and sized */
-.window-app.crafting-compendium .window-header {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
+.crafting-compendium .clear-outcome {
+    margin-top: 5px;
+    background: rgba(255, 0, 0, 0.6);
+    border: none;
+    color: white;
+    padding: 2px 5px;
+    cursor: pointer;
+}
+
+.crafting-compendium .clear-outcome:hover {
+    background: rgba(255, 0, 0, 0.8);
+}
+
+/* --- Edit Mode Styling --- */
+.crafting-compendium.edit-mode .outcome-cell {
+    border: 1px dashed #ff0;
     padding: 5px;
 }
 
-/* Style the header buttons */
-.window-app.crafting-compendium .window-header a.header-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px; /* Fixed width for icon-only buttons */
-    height: 30px;
-    margin-left: 5px;
-    padding: 0;
-}
-
-/* Ensure the icon is centered */
-.window-app.crafting-compendium .window-header a.header-button i {
-    margin: 0;
+.crafting-compendium.edit-mode .edit-mode-indicator {
+    font-size: 20px;
+    color: #ffd700;
+    text-shadow: 1px 1px 2px #000;
+    display: inline-block;
 }

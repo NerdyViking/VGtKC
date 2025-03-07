@@ -235,7 +235,7 @@ export async function handleCrafting(app, craftingState, calculateIPSums, determ
         }
     }
 
-    const categoryKey = finalCategory.charAt(0).toUpperCase() + finalCategory.slice(1);
+    const outcomeCategoryKey = finalCategory.charAt(0).toUpperCase() + finalCategory.slice(1); // Renamed to avoid conflict
     let knownOutcomes = actor.getFlag("vikarovs-guide-to-kaeliduran-crafting", "knownCraftingOutcomes") || { Combat: [], Utility: [], Entropy: [] };
 
     // Ensure all categories exist
@@ -245,32 +245,48 @@ export async function handleCrafting(app, craftingState, calculateIPSums, determ
         Entropy: knownOutcomes.Entropy || []
     };
 
-    // Define consumableData before using it
-    const finalRarity = getRarity(finalSum);
-    const consumableName = `${finalRarity} ${categoryKey} Consumable`;
-    const consumableData = {
-        name: consumableName,
-        type: "consumable",
-        system: {
-            description: { value: `A ${finalRarity.toLowerCase()} ${finalCategory} consumable crafted via alchemy.` },
-            quantity,
-            rarity: finalRarity.toLowerCase(),
-            consumableType: "potion",
-            uses: { value: 1, max: 1, per: "charges", autoDestroy: true }
+    // Check for predefined outcome in game settings
+    const outcomes = game.settings.get('vikarovs-guide-to-kaeliduran-crafting', 'consumableOutcomes');
+    const predefinedItemId = outcomes[outcomeCategoryKey][finalSum];
+    let consumableData;
+
+    if (predefinedItemId) {
+        const predefinedItem = game.items.get(predefinedItemId);
+        if (predefinedItem) {
+            // Clone predefined item and adjust quantity
+            consumableData = foundry.utils.deepClone(predefinedItem.toObject());
+            consumableData.system.quantity = quantity;
         }
-    };
+    }
+
+    // Fallback to generic consumable if no predefined item
+    if (!consumableData) {
+        const finalRarity = getRarity(finalSum);
+        const consumableName = `${finalRarity} ${outcomeCategoryKey} Consumable`;
+        consumableData = {
+            name: consumableName,
+            type: "consumable",
+            system: {
+                description: { value: `A ${finalRarity.toLowerCase()} ${finalCategory} consumable crafted via alchemy.` },
+                quantity,
+                rarity: finalRarity.toLowerCase(),
+                consumableType: "potion",
+                uses: { value: 1, max: 1, per: "charges", autoDestroy: true }
+            }
+        };
+    }
 
     // Create the crafted item and update known outcomes
     try {
         console.log("Debug: Creating crafted item...");
         const createdItems = await actor.createEmbeddedDocuments("Item", [consumableData]);
         console.log("Debug: Created items:", createdItems);
-        ui.notifications.info(`You crafted ${quantity} ${consumableName}(s)!`);
+        ui.notifications.info(`You crafted ${quantity} ${consumableData.name}(s)!`);
 
-        // Update known outcomes with the consumable item ID
-        if (!knownOutcomes[categoryKey].some(entry => (typeof entry === "number" && entry === finalSum) || (entry.sum === finalSum))) {
+        // Update known outcomes only if not already known
+        if (!knownOutcomes[outcomeCategoryKey].some(entry => (typeof entry === "number" && entry === finalSum) || (entry.sum === finalSum))) {
             const newEntry = { sum: finalSum, itemId: createdItems[0].id };
-            knownOutcomes[categoryKey] = [...knownOutcomes[categoryKey], newEntry];
+            knownOutcomes[outcomeCategoryKey] = [...knownOutcomes[outcomeCategoryKey], newEntry];
             await actor.setFlag("vikarovs-guide-to-kaeliduran-crafting", "knownCraftingOutcomes", knownOutcomes);
         }
     } catch (error) {

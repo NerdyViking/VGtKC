@@ -1,6 +1,10 @@
-<form class="{{cssClass}}" autocomplete="off">
+<form class="{{cssClass}} {{#if editMode}}edit-mode{{/if}}" autocomplete="off">
     <header class="sheet-header">
-        <h1 class="charname"><span>Vikarov's Crafting Compendium</span></h1>
+        <h1 class="charname"><span>Vikarov's Crafting Compendium</span>
+            {{#if editMode}}
+                <span class="edit-mode-indicator" title="Edit Mode Active">✎</span>
+            {{/if}}
+        </h1>
     </header>
     <nav class="tabs compendium-tabs" data-group="compendium-tabs">
         <a class="item" data-tab="combat" title="Combat Outcomes"><i class="fas fa-swords"></i></a>
@@ -14,17 +18,24 @@
                     <h3 class="rarity-label">Common Outcomes</h3>
                     <div class="outcomes-grid common-grid">
                         {{#each tabs.combat.rarityGroups.common.outcomes as |outcome sum|}}
-                            <div class="outcome-cell">
+                            <div class="outcome-cell" data-category="Combat" data-sum="{{sum}}">
                                 {{#if outcome.isKnown}}
                                     {{#if outcome.itemId}}
-                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable"></a>
+                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable">
+                                            <img src="{{outcome.itemImg}}" class="item-icon" alt="Item Icon" />
+                                        </a>
                                     {{else}}
                                         <div class="outcome-icon known-icon" title="Known but Not Linked"></div>
                                     {{/if}}
                                 {{else}}
-                                    <div class="outcome-icon unknown-icon" title="Unknown Outcome"></div>
+                                    <div class="outcome-icon unknown-icon" title="{{#if ../editMode}}Drop an item here{{else}}Unknown Outcome{{/if}}"></div>
                                 {{/if}}
                                 <span class="outcome-sum">{{sum}}</span>
+                                {{#if ../editMode}}
+                                    {{#if outcome.itemId}}
+                                        <button class="clear-outcome" data-category="Combat" data-sum="{{sum}}">Clear</button>
+                                    {{/if}}
+                                {{/if}}
                             </div>
                         {{/each}}
                     </div>
@@ -33,17 +44,24 @@
                     <h3 class="rarity-label">Uncommon Outcomes</h3>
                     <div class="outcomes-grid uncommon-grid">
                         {{#each tabs.combat.rarityGroups.uncommon.outcomes as |outcome sum|}}
-                            <div class="outcome-cell">
+                            <div class="outcome-cell" data-category="Combat" data-sum="{{sum}}">
                                 {{#if outcome.isKnown}}
                                     {{#if outcome.itemId}}
-                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable"></a>
+                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable">
+                                            <img src="{{outcome.itemImg}}" class="item-icon" alt="Item Icon" />
+                                        </a>
                                     {{else}}
                                         <div class="outcome-icon known-icon" title="Known but Not Linked"></div>
                                     {{/if}}
                                 {{else}}
-                                    <div class="outcome-icon unknown-icon" title="Unknown Outcome"></div>
+                                    <div class="outcome-icon unknown-icon" title="{{#if ../editMode}}Drop an item here{{else}}Unknown Outcome{{/if}}"></div>
                                 {{/if}}
                                 <span class="outcome-sum">{{sum}}</span>
+                                {{#if ../editMode}}
+                                    {{#if outcome.itemId}}
+                                        <button class="clear-outcome" data-category="Combat" data-sum="{{sum}}">Clear</button>
+                                    {{/if}}
+                                {{/if}}
                             </div>
                         {{/each}}
                     </div>
@@ -54,17 +72,24 @@
                     <h3 class="rarity-label">Rare Outcomes</h3>
                     <div class="outcomes-grid rare-grid">
                         {{#each tabs.combat.rarityGroups.rare.outcomes as |outcome sum|}}
-                            <div class="outcome-cell">
+                            <div class="outcome-cell" data-category="Combat" data-sum="{{sum}}">
                                 {{#if outcome.isKnown}}
                                     {{#if outcome.itemId}}
-                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable"></a>
+                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable">
+                                            <img src="{{outcome.itemImg}}" class="item-icon" alt="Item Icon" />
+                                        </a>
                                     {{else}}
                                         <div class="outcome-icon known-icon" title="Known but Not Linked"></div>
                                     {{/if}}
                                 {{else}}
-                                    <div class="outcome-icon unknown-icon" title="Unknown Outcome"></div>
+                                    <div class="outcome-icon unknown-icon" title="{{#if ../editMode}}Drop an item here{{else}}Unknown Outcome{{/if}}"></div>
                                 {{/if}}
                                 <span class="outcome-sum">{{sum}}</span>
+                                {{#if ../editMode}}
+                                    {{#if outcome.itemId}}
+                                        <button class="clear-outcome" data-category="Combat" data-sum="{{sum}}">Clear</button>
+                                    {{/if}}
+                                {{/if}}
                             </div>
                         {{/each}}
                     </div>
@@ -73,17 +98,24 @@
                     <h3 class="rarity-label">Very Rare Outcomes</h3>
                     <div class="outcomes-grid veryRare-grid">
                         {{#each tabs.combat.rarityGroups.veryRare.outcomes as |outcome sum|}}
-                            <div class="outcome-cell">
+                            <div class="outcome-cell" data-category="Combat" data-sum="{{sum}}">
                                 {{#if outcome.isKnown}}
                                     {{#if outcome.itemId}}
-                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable"></a>
+                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable">
+                                            <img src="{{outcome.itemImg}}" class="item-icon" alt="Item Icon" />
+                                        </a>
                                     {{else}}
                                         <div class="outcome-icon known-icon" title="Known but Not Linked"></div>
                                     {{/if}}
                                 {{else}}
-                                    <div class="outcome-icon unknown-icon" title="Unknown Outcome"></div>
+                                    <div class="outcome-icon unknown-icon" title="{{#if ../editMode}}Drop an item here{{else}}Unknown Outcome{{/if}}"></div>
                                 {{/if}}
                                 <span class="outcome-sum">{{sum}}</span>
+                                {{#if ../editMode}}
+                                    {{#if outcome.itemId}}
+                                        <button class="clear-outcome" data-category="Combat" data-sum="{{sum}}">Clear</button>
+                                    {{/if}}
+                                {{/if}}
                             </div>
                         {{/each}}
                     </div>
@@ -92,17 +124,24 @@
                     <h3 class="rarity-label">Legendary Outcomes</h3>
                     <div class="outcomes-grid legendary-grid">
                         {{#each tabs.combat.rarityGroups.legendary.outcomes as |outcome sum|}}
-                            <div class="outcome-cell">
+                            <div class="outcome-cell" data-category="Combat" data-sum="{{sum}}">
                                 {{#if outcome.isKnown}}
                                     {{#if outcome.itemId}}
-                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable"></a>
+                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable">
+                                            <img src="{{outcome.itemImg}}" class="item-icon" alt="Item Icon" />
+                                        </a>
                                     {{else}}
                                         <div class="outcome-icon known-icon" title="Known but Not Linked"></div>
                                     {{/if}}
                                 {{else}}
-                                    <div class="outcome-icon unknown-icon" title="Unknown Outcome"></div>
+                                    <div class="outcome-icon unknown-icon" title="{{#if ../editMode}}Drop an item here{{else}}Unknown Outcome{{/if}}"></div>
                                 {{/if}}
                                 <span class="outcome-sum">{{sum}}</span>
+                                {{#if ../editMode}}
+                                    {{#if outcome.itemId}}
+                                        <button class="clear-outcome" data-category="Combat" data-sum="{{sum}}">Clear</button>
+                                    {{/if}}
+                                {{/if}}
                             </div>
                         {{/each}}
                     </div>
@@ -115,17 +154,24 @@
                     <h3 class="rarity-label">Common Outcomes</h3>
                     <div class="outcomes-grid common-grid">
                         {{#each tabs.utility.rarityGroups.common.outcomes as |outcome sum|}}
-                            <div class="outcome-cell">
+                            <div class="outcome-cell" data-category="Utility" data-sum="{{sum}}">
                                 {{#if outcome.isKnown}}
                                     {{#if outcome.itemId}}
-                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable"></a>
+                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable">
+                                            <img src="{{outcome.itemImg}}" class="item-icon" alt="Item Icon" />
+                                        </a>
                                     {{else}}
                                         <div class="outcome-icon known-icon" title="Known but Not Linked"></div>
                                     {{/if}}
                                 {{else}}
-                                    <div class="outcome-icon unknown-icon" title="Unknown Outcome"></div>
+                                    <div class="outcome-icon unknown-icon" title="{{#if ../editMode}}Drop an item here{{else}}Unknown Outcome{{/if}}"></div>
                                 {{/if}}
                                 <span class="outcome-sum">{{sum}}</span>
+                                {{#if ../editMode}}
+                                    {{#if outcome.itemId}}
+                                        <button class="clear-outcome" data-category="Utility" data-sum="{{sum}}">Clear</button>
+                                    {{/if}}
+                                {{/if}}
                             </div>
                         {{/each}}
                     </div>
@@ -134,17 +180,24 @@
                     <h3 class="rarity-label">Uncommon Outcomes</h3>
                     <div class="outcomes-grid uncommon-grid">
                         {{#each tabs.utility.rarityGroups.uncommon.outcomes as |outcome sum|}}
-                            <div class="outcome-cell">
+                            <div class="outcome-cell" data-category="Utility" data-sum="{{sum}}">
                                 {{#if outcome.isKnown}}
                                     {{#if outcome.itemId}}
-                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable"></a>
+                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable">
+                                            <img src="{{outcome.itemImg}}" class="item-icon" alt="Item Icon" />
+                                        </a>
                                     {{else}}
                                         <div class="outcome-icon known-icon" title="Known but Not Linked"></div>
                                     {{/if}}
                                 {{else}}
-                                    <div class="outcome-icon unknown-icon" title="Unknown Outcome"></div>
+                                    <div class="outcome-icon unknown-icon" title="{{#if ../editMode}}Drop an item here{{else}}Unknown Outcome{{/if}}"></div>
                                 {{/if}}
                                 <span class="outcome-sum">{{sum}}</span>
+                                {{#if ../editMode}}
+                                    {{#if outcome.itemId}}
+                                        <button class="clear-outcome" data-category="Utility" data-sum="{{sum}}">Clear</button>
+                                    {{/if}}
+                                {{/if}}
                             </div>
                         {{/each}}
                     </div>
@@ -155,17 +208,24 @@
                     <h3 class="rarity-label">Rare Outcomes</h3>
                     <div class="outcomes-grid rare-grid">
                         {{#each tabs.utility.rarityGroups.rare.outcomes as |outcome sum|}}
-                            <div class="outcome-cell">
+                            <div class="outcome-cell" data-category="Utility" data-sum="{{sum}}">
                                 {{#if outcome.isKnown}}
                                     {{#if outcome.itemId}}
-                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable"></a>
+                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable">
+                                            <img src="{{outcome.itemImg}}" class="item-icon" alt="Item Icon" />
+                                        </a>
                                     {{else}}
                                         <div class="outcome-icon known-icon" title="Known but Not Linked"></div>
                                     {{/if}}
                                 {{else}}
-                                    <div class="outcome-icon unknown-icon" title="Unknown Outcome"></div>
+                                    <div class="outcome-icon unknown-icon" title="{{#if ../editMode}}Drop an item here{{else}}Unknown Outcome{{/if}}"></div>
                                 {{/if}}
                                 <span class="outcome-sum">{{sum}}</span>
+                                {{#if ../editMode}}
+                                    {{#if outcome.itemId}}
+                                        <button class="clear-outcome" data-category="Utility" data-sum="{{sum}}">Clear</button>
+                                    {{/if}}
+                                {{/if}}
                             </div>
                         {{/each}}
                     </div>
@@ -174,17 +234,24 @@
                     <h3 class="rarity-label">Very Rare Outcomes</h3>
                     <div class="outcomes-grid veryRare-grid">
                         {{#each tabs.utility.rarityGroups.veryRare.outcomes as |outcome sum|}}
-                            <div class="outcome-cell">
+                            <div class="outcome-cell" data-category="Utility" data-sum="{{sum}}">
                                 {{#if outcome.isKnown}}
                                     {{#if outcome.itemId}}
-                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable"></a>
+                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable">
+                                            <img src="{{outcome.itemImg}}" class="item-icon" alt="Item Icon" />
+                                        </a>
                                     {{else}}
                                         <div class="outcome-icon known-icon" title="Known but Not Linked"></div>
                                     {{/if}}
                                 {{else}}
-                                    <div class="outcome-icon unknown-icon" title="Unknown Outcome"></div>
+                                    <div class="outcome-icon unknown-icon" title="{{#if ../editMode}}Drop an item here{{else}}Unknown Outcome{{/if}}"></div>
                                 {{/if}}
                                 <span class="outcome-sum">{{sum}}</span>
+                                {{#if ../editMode}}
+                                    {{#if outcome.itemId}}
+                                        <button class="clear-outcome" data-category="Utility" data-sum="{{sum}}">Clear</button>
+                                    {{/if}}
+                                {{/if}}
                             </div>
                         {{/each}}
                     </div>
@@ -193,17 +260,24 @@
                     <h3 class="rarity-label">Legendary Outcomes</h3>
                     <div class="outcomes-grid legendary-grid">
                         {{#each tabs.utility.rarityGroups.legendary.outcomes as |outcome sum|}}
-                            <div class="outcome-cell">
+                            <div class="outcome-cell" data-category="Utility" data-sum="{{sum}}">
                                 {{#if outcome.isKnown}}
                                     {{#if outcome.itemId}}
-                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable"></a>
+                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable">
+                                            <img src="{{outcome.itemImg}}" class="item-icon" alt="Item Icon" />
+                                        </a>
                                     {{else}}
                                         <div class="outcome-icon known-icon" title="Known but Not Linked"></div>
                                     {{/if}}
                                 {{else}}
-                                    <div class="outcome-icon unknown-icon" title="Unknown Outcome"></div>
+                                    <div class="outcome-icon unknown-icon" title="{{#if ../editMode}}Drop an item here{{else}}Unknown Outcome{{/if}}"></div>
                                 {{/if}}
                                 <span class="outcome-sum">{{sum}}</span>
+                                {{#if ../editMode}}
+                                    {{#if outcome.itemId}}
+                                        <button class="clear-outcome" data-category="Utility" data-sum="{{sum}}">Clear</button>
+                                    {{/if}}
+                                {{/if}}
                             </div>
                         {{/each}}
                     </div>
@@ -216,17 +290,24 @@
                     <h3 class="rarity-label">Common Outcomes</h3>
                     <div class="outcomes-grid common-grid">
                         {{#each tabs.entropy.rarityGroups.common.outcomes as |outcome sum|}}
-                            <div class="outcome-cell">
+                            <div class="outcome-cell" data-category="Entropy" data-sum="{{sum}}">
                                 {{#if outcome.isKnown}}
                                     {{#if outcome.itemId}}
-                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable"></a>
+                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable">
+                                            <img src="{{outcome.itemImg}}" class="item-icon" alt="Item Icon" />
+                                        </a>
                                     {{else}}
                                         <div class="outcome-icon known-icon" title="Known but Not Linked"></div>
                                     {{/if}}
                                 {{else}}
-                                    <div class="outcome-icon unknown-icon" title="Unknown Outcome"></div>
+                                    <div class="outcome-icon unknown-icon" title="{{#if ../editMode}}Drop an item here{{else}}Unknown Outcome{{/if}}"></div>
                                 {{/if}}
                                 <span class="outcome-sum">{{sum}}</span>
+                                {{#if ../editMode}}
+                                    {{#if outcome.itemId}}
+                                        <button class="clear-outcome" data-category="Entropy" data-sum="{{sum}}">Clear</button>
+                                    {{/if}}
+                                {{/if}}
                             </div>
                         {{/each}}
                     </div>
@@ -235,17 +316,24 @@
                     <h3 class="rarity-label">Uncommon Outcomes</h3>
                     <div class="outcomes-grid uncommon-grid">
                         {{#each tabs.entropy.rarityGroups.uncommon.outcomes as |outcome sum|}}
-                            <div class="outcome-cell">
+                            <div class="outcome-cell" data-category="Entropy" data-sum="{{sum}}">
                                 {{#if outcome.isKnown}}
                                     {{#if outcome.itemId}}
-                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable"></a>
+                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable">
+                                            <img src="{{outcome.itemImg}}" class="item-icon" alt="Item Icon" />
+                                        </a>
                                     {{else}}
                                         <div class="outcome-icon known-icon" title="Known but Not Linked"></div>
                                     {{/if}}
                                 {{else}}
-                                    <div class="outcome-icon unknown-icon" title="Unknown Outcome"></div>
+                                    <div class="outcome-icon unknown-icon" title="{{#if ../editMode}}Drop an item here{{else}}Unknown Outcome{{/if}}"></div>
                                 {{/if}}
                                 <span class="outcome-sum">{{sum}}</span>
+                                {{#if ../editMode}}
+                                    {{#if outcome.itemId}}
+                                        <button class="clear-outcome" data-category="Entropy" data-sum="{{sum}}">Clear</button>
+                                    {{/if}}
+                                {{/if}}
                             </div>
                         {{/each}}
                     </div>
@@ -256,17 +344,24 @@
                     <h3 class="rarity-label">Rare Outcomes</h3>
                     <div class="outcomes-grid rare-grid">
                         {{#each tabs.entropy.rarityGroups.rare.outcomes as |outcome sum|}}
-                            <div class="outcome-cell">
+                            <div class="outcome-cell" data-category="Entropy" data-sum="{{sum}}">
                                 {{#if outcome.isKnown}}
                                     {{#if outcome.itemId}}
-                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable"></a>
+                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable">
+                                            <img src="{{outcome.itemImg}}" class="item-icon" alt="Item Icon" />
+                                        </a>
                                     {{else}}
                                         <div class="outcome-icon known-icon" title="Known but Not Linked"></div>
                                     {{/if}}
                                 {{else}}
-                                    <div class="outcome-icon unknown-icon" title="Unknown Outcome"></div>
+                                    <div class="outcome-icon unknown-icon" title="{{#if ../editMode}}Drop an item here{{else}}Unknown Outcome{{/if}}"></div>
                                 {{/if}}
                                 <span class="outcome-sum">{{sum}}</span>
+                                {{#if ../editMode}}
+                                    {{#if outcome.itemId}}
+                                        <button class="clear-outcome" data-category="Entropy" data-sum="{{sum}}">Clear</button>
+                                    {{/if}}
+                                {{/if}}
                             </div>
                         {{/each}}
                     </div>
@@ -275,17 +370,24 @@
                     <h3 class="rarity-label">Very Rare Outcomes</h3>
                     <div class="outcomes-grid veryRare-grid">
                         {{#each tabs.entropy.rarityGroups.veryRare.outcomes as |outcome sum|}}
-                            <div class="outcome-cell">
+                            <div class="outcome-cell" data-category="Entropy" data-sum="{{sum}}">
                                 {{#if outcome.isKnown}}
                                     {{#if outcome.itemId}}
-                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable"></a>
+                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable">
+                                            <img src="{{outcome.itemImg}}" class="item-icon" alt="Item Icon" />
+                                        </a>
                                     {{else}}
                                         <div class="outcome-icon known-icon" title="Known but Not Linked"></div>
                                     {{/if}}
                                 {{else}}
-                                    <div class="outcome-icon unknown-icon" title="Unknown Outcome"></div>
+                                    <div class="outcome-icon unknown-icon" title="{{#if ../editMode}}Drop an item here{{else}}Unknown Outcome{{/if}}"></div>
                                 {{/if}}
                                 <span class="outcome-sum">{{sum}}</span>
+                                {{#if ../editMode}}
+                                    {{#if outcome.itemId}}
+                                        <button class="clear-outcome" data-category="Entropy" data-sum="{{sum}}">Clear</button>
+                                    {{/if}}
+                                {{/if}}
                             </div>
                         {{/each}}
                     </div>
@@ -294,17 +396,24 @@
                     <h3 class="rarity-label">Legendary Outcomes</h3>
                     <div class="outcomes-grid legendary-grid">
                         {{#each tabs.entropy.rarityGroups.legendary.outcomes as |outcome sum|}}
-                            <div class="outcome-cell">
+                            <div class="outcome-cell" data-category="Entropy" data-sum="{{sum}}">
                                 {{#if outcome.isKnown}}
                                     {{#if outcome.itemId}}
-                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable"></a>
+                                        <a class="outcome-icon consumable-link" data-item-id="{{outcome.itemId}}" title="View Consumable">
+                                            <img src="{{outcome.itemImg}}" class="item-icon" alt="Item Icon" />
+                                        </a>
                                     {{else}}
                                         <div class="outcome-icon known-icon" title="Known but Not Linked"></div>
                                     {{/if}}
                                 {{else}}
-                                    <div class="outcome-icon unknown-icon" title="Unknown Outcome"></div>
+                                    <div class="outcome-icon unknown-icon" title="{{#if ../editMode}}Drop an item here{{else}}Unknown Outcome{{/if}}"></div>
                                 {{/if}}
                                 <span class="outcome-sum">{{sum}}</span>
+                                {{#if ../editMode}}
+                                    {{#if outcome.itemId}}
+                                        <button class="clear-outcome" data-category="Entropy" data-sum="{{sum}}">Clear</button>
+                                    {{/if}}
+                                {{/if}}
                             </div>
                         {{/each}}
                     </div>
