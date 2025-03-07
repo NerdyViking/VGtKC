@@ -169,18 +169,18 @@ export async function handleCrafting(app, craftingState, calculateIPSums, determ
     console.log("Debug: Triggering toolItem.rollToolCheck with options:", options);
     let rollTotal = null;
     try {
-      const rollResult = await toolItem.rollToolCheck(options);
-      console.log("Debug: rollToolCheck result:", rollResult);
-      if (rollResult && Array.isArray(rollResult) && rollResult.length > 0 && rollResult[0]?.total != null) {
-        rollTotal = rollResult[0].total;
-        console.log("Debug: Roll total from rollToolCheck:", rollTotal);
-      } else {
-        throw new Error("Invalid roll result returned from rollToolCheck.");
-      }
+        const rollResult = await toolItem.rollToolCheck(options);
+        console.log("Debug: rollToolCheck result:", rollResult);
+        if (rollResult && Array.isArray(rollResult) && rollResult.length > 0 && rollResult[0]?.total != null) {
+            rollTotal = rollResult[0].total;
+            console.log("Debug: Roll total from rollToolCheck:", rollTotal);
+        } else {
+            throw new Error("Invalid roll result returned from rollToolCheck.");
+        }
     } catch (err) {
-      ui.notifications.error(`Failed to determine tool check result: ${err.message}`);
-      console.error("Debug: Tool check error:", err);
-      return;
+        ui.notifications.error(`Failed to determine tool check result: ${err.message}`);
+        console.error("Debug: Tool check error:", err);
+        return;
     }
 
     if (rollTotal === null) return;
@@ -188,7 +188,6 @@ export async function handleCrafting(app, craftingState, calculateIPSums, determ
     console.log("Debug: Roll total after processing:", rollTotal, "DC:", dc);
     if (rollTotal === null) {
         ui.notifications.error("Failed to determine tool check result. Roll total is null.");
-        console.error("Debug: Latest chat message:", latestMessage);
         return;
     }
 
@@ -246,22 +245,41 @@ export async function handleCrafting(app, craftingState, calculateIPSums, determ
         Entropy: knownOutcomes.Entropy || []
     };
 
-    // Update known outcomes with the consumable item ID
-    if (!knownOutcomes[categoryKey].some(entry => (typeof entry === "number" && entry === finalSum) || (entry.sum === finalSum))) {
+    // Define consumableData before using it
+    const finalRarity = getRarity(finalSum);
+    const consumableName = `${finalRarity} ${categoryKey} Consumable`;
+    const consumableData = {
+        name: consumableName,
+        type: "consumable",
+        system: {
+            description: { value: `A ${finalRarity.toLowerCase()} ${finalCategory} consumable crafted via alchemy.` },
+            quantity,
+            rarity: finalRarity.toLowerCase(),
+            consumableType: "potion",
+            uses: { value: 1, max: 1, per: "charges", autoDestroy: true }
+        }
+    };
+
+    // Create the crafted item and update known outcomes
+    try {
+        console.log("Debug: Creating crafted item...");
         const createdItems = await actor.createEmbeddedDocuments("Item", [consumableData]);
         console.log("Debug: Created items:", createdItems);
         ui.notifications.info(`You crafted ${quantity} ${consumableName}(s)!`);
 
-        // Store the item ID with the sum
-        const newEntry = { sum: finalSum, itemId: createdItems[0].id };
-        knownOutcomes[categoryKey] = [...knownOutcomes[categoryKey], newEntry];
-        await actor.setFlag("vikarovs-guide-to-kaeliduran-crafting", "knownCraftingOutcomes", knownOutcomes);
-    } else {
-        const createdItems = await actor.createEmbeddedDocuments("Item", [consumableData]);
-        console.log("Debug: Created items:", createdItems);
-        ui.notifications.info(`You crafted ${quantity} ${consumableName}(s)!`);
+        // Update known outcomes with the consumable item ID
+        if (!knownOutcomes[categoryKey].some(entry => (typeof entry === "number" && entry === finalSum) || (entry.sum === finalSum))) {
+            const newEntry = { sum: finalSum, itemId: createdItems[0].id };
+            knownOutcomes[categoryKey] = [...knownOutcomes[categoryKey], newEntry];
+            await actor.setFlag("vikarovs-guide-to-kaeliduran-crafting", "knownCraftingOutcomes", knownOutcomes);
+        }
+    } catch (error) {
+        ui.notifications.error("Failed to create crafted item.");
+        console.error("Debug: Item creation error:", error);
+        return; // Stop execution if item creation fails
     }
 
+    // Consume reagents after creating the item
     try {
         console.log("Debug: Consuming reagents...");
         await consumeReagents(actor, craftingState.selectedReagents);
@@ -271,6 +289,7 @@ export async function handleCrafting(app, craftingState, calculateIPSums, determ
         console.error("Debug: Reagent consumption error:", error);
     }
 
+    // Deduct gold cost
     try {
         console.log("Debug: Deducting gold cost...");
         const newGold = Math.max(0, currentGold - goldCost);
@@ -288,29 +307,7 @@ export async function handleCrafting(app, craftingState, calculateIPSums, determ
         console.error("Debug: Gold deduction error:", error);
     }
 
-    try {
-        console.log("Debug: Creating crafted item...");
-        const finalRarity = getRarity(finalSum);
-        const consumableName = `${finalRarity} ${categoryKey} Consumable`;
-        const consumableData = {
-            name: consumableName,
-            type: "consumable",
-            system: {
-                description: { value: `A ${finalRarity.toLowerCase()} ${finalCategory} consumable crafted via alchemy.` },
-                quantity,
-                rarity: finalRarity.toLowerCase(),
-                consumableType: "potion",
-                uses: { value: 1, max: 1, per: "charges", autoDestroy: true }
-            }
-        };
-        const createdItems = await actor.createEmbeddedDocuments("Item", [consumableData]);
-        console.log("Debug: Created items:", createdItems);
-        ui.notifications.info(`You crafted ${quantity} ${consumableName}(s)!`);
-    } catch (error) {
-        ui.notifications.error("Failed to create crafted item.");
-        console.error("Debug: Item creation error:", error);
-    }
-
+    // Reset crafting state and re-render the tab
     try {
         console.log("Debug: Resetting crafting state...");
         craftingState.selectedReagents = [null, null, null];
@@ -356,9 +353,23 @@ function getRarity(sum) {
 }
 
 async function consumeReagents(actor, reagents) {
-    const updates = reagents.map(reagent => ({
-        _id: reagent.id,
-        "system.quantity": (reagent.system.quantity || 1) - 1
-    }));
-    await actor.updateEmbeddedDocuments("Item", updates);
+    const updates = [];
+    const deletions = [];
+    for (const reagent of reagents) {
+        const newQuantity = (reagent.system.quantity || 1) - 1;
+        if (newQuantity <= 0) {
+            deletions.push(reagent.id);
+        } else {
+            updates.push({
+                _id: reagent.id,
+                "system.quantity": newQuantity
+            });
+        }
+    }
+    if (updates.length) {
+        await actor.updateEmbeddedDocuments("Item", updates);
+    }
+    if (deletions.length) {
+        await actor.deleteEmbeddedDocuments("Item", deletions);
+    }
 }
