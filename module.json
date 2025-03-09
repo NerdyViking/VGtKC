@@ -2,7 +2,7 @@
   "name": "vikarovs-guide-to-kaeliduran-crafting",
   "title": "Vikarov's Guide to Kaeliduran Crafting",
   "description": "A custom alchemy crafting system for Foundry VTT, designed for the world of Kaelidur.",
-  "version": "0.1.0",
+  "version": "0.9.0",
   "author": "Your Name",
   "compatibility": {
     "minimum": "12",
@@ -11,10 +11,16 @@
   "esmodules": [
     "main.js",
     "scripts/hooks.js",
-    "scripts/reagentSelectionDialog.js",
-    "scripts/craftingCompendium.js",
-    "scripts/craftingUI.js",
+    "scripts/alchemyHooks.js",
+    "scripts/magicHooks.js",
     "scripts/reagents.js",
+    "scripts/alchemyCrafting.js",
+    "scripts/alchemyCraftingUI.js",
+    "scripts/magicCraftingUI.js",
+    "scripts/craftingUI.js",
+    "scripts/alchemyCompendium.js",
+    "scripts/craftingCompendium.js",
+    "scripts/reagentSelectionDialog.js",
     "scripts/utils.js"
   ],
   "templates": [
@@ -23,7 +29,12 @@
     "templates/crafting-compendium.hbs"
   ],
   "styles": [
-    "styles.css"
+    "styles/alchemy-crafting.css",
+    "styles/magic-crafting.css",
+    "styles/alchemy-compendium.css",
+    "styles/crafting-compendium.css",
+    "styles/reagent-selection-dialog.css",
+    "styles/global.css"
   ],
   "languages": [
     {

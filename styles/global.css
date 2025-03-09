@@ -1,0 +1,103 @@
+/* Global Styles */
+
+/* Custom Tooltip Styling */
+.custom-tooltip {
+    position: absolute;
+    background: #1c2526;
+    border: 1px solid #4b4a44;
+    padding: 5px;
+    border-radius: 3px;
+    color: #f0f0e0;
+    z-index: 10001; /* Ensure it appears above other elements */
+    display: block !important; /* Force visibility */
+    min-width: 240px; /* Minimum width to ensure readability */
+    box-sizing: border-box; /* Include padding and border in width/height */
+    pointer-events: none;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+    font-family: var(--font-primary, "Modesto Condensed", "Palatino Linotype", serif);
+    overflow-wrap: break-word; /* Ensure long text wraps */
+}
+
+.custom-tooltip h4 {
+    margin: 0 0 5px 0;
+    font-size: 14px;
+    font-weight: bold;
+    display: block; /* Ensure the header is visible */
+}
+
+.custom-tooltip div {
+    font-size: 12px;
+    line-height: 1.2;
+    display: block; /* Ensure the description is visible */
+}
+
+/* Reagent IPs Display Styling */
+.reagent-ips-span {
+    font-size: 0.9em;
+    color: #c9c7b8;
+    margin-left: 5px;
+    font-weight: normal; /* Match Foundry's default non-bold for appended text */
+    white-space: nowrap; /* Prevent wrapping */
+}
+
+/* Item Piles Merchant Sheet Override */
+.item-piles-merchant-sheet .reagent-ips-span {
+    color: #000000; /* Black text for Item Piles merchant sheet */
+}
+
+/* Additional Shared Styles */
+.outcome-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.outcome-text {
+    color: #ffffff; /* White text for dark theme */
+    font-weight: bold;
+}
+
+.outcome-item-icon {
+    cursor: pointer;
+}
+
+.outcome-item-icon img {
+    width: 24px;
+    height: 24px;
+}
+
+/* Reagent Properties Form Fields */
+.form-group.stacked.checkbox-grid .form-fields {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.reagent-properties {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.reagent-properties .essence-select {
+    background: #2e2e2e;
+    color: #f0f0e0;
+    border: 1px solid #4b4a44;
+    border-radius: 3px;
+    padding: 2px;
+    width: 100px;
+    font-size: 30px;
+}
+
+.reagent-properties .ip-input {
+    background: #2e2e2e;
+    color: #f0f0e0;
+    border: 1px solid #4b4a44;
+    border-radius: 3px;
+    padding: 2px;
+    width: 30px;
+    height: 22px;
+    font-size: 30px;
+    text-align: center;
+}

@@ -1,33 +1,29 @@
-<div class="dnd5e sheet item reagent-selection-dialog">
+<form class="reagent-selection">
     <header class="sheet-header">
         <h1 class="charname">Select a Reagent</h1>
     </header>
-    <section class="sheet-content">
+    <section class="sheet-body">
         <div class="search-bar">
-            <input type="text" class="reagent-search" value="{{searchQuery}}" placeholder="Search by name or essence (e.g., Primal)" />
+            <input type="text" class="reagent-search" placeholder="Search reagents..." />
             <select class="sort-select">
-                <option value="name-asc" selected>Sort: Name (A-Z)</option>
-                <option value="name-desc">Sort: Name (Z-A)</option>
-                <option value="essence-asc">Sort: Essence (A-Z)</option>
-                <option value="essence-desc">Sort: Essence (Z-A)</option>
-                <option value="combat-desc">Sort: Combat (High to Low)</option>
-                <option value="combat-asc">Sort: Combat (Low to High)</option>
-                <option value="utility-desc">Sort: Utility (High to Low)</option>
-                <option value="utility-asc">Sort: Utility (Low to High)</option>
-                <option value="entropy-desc">Sort: Entropy (High to Low)</option>
-                <option value="entropy-asc">Sort: Entropy (Low to High)</option>
+                <option value="name">Sort by Name</option>
+                <option value="quantity">Sort by Quantity</option>
             </select>
         </div>
-        {{#if filteredReagents.length}}
-            {{#each filteredReagents}}
-            <div class="reagent-entry" data-item-id="{{this._id}}">
-                <img src="{{this.img}}" class="item-icon"/>
-                <span class="reagent-name">{{this.name}}</span>
-                <span class="reagent-details">({{this.essence}}: {{this.combat}}, {{this.utility}}, {{this.entropy}})</span>
-            </div>
-            {{/each}}
-        {{else}}
-            <p class="no-reagents">No reagents match your search.</p>
-        {{/if}}
+        <div class="reagent-list">
+            {{#if hasReagents}}
+                {{#each reagents as |reagent|}}
+                    <div class="reagent-entry" data-item-id="{{reagent.id}}" data-item-name="{{reagent.name}}">
+                        <img class="item-icon" src="{{reagent.img}}" alt="{{reagent.name}}" width="36" height="36"/>
+                        <div class="reagent-content">
+                            <span class="reagent-name">{{reagent.name}}</span>
+                            <span class="reagent-details">Qty: {{reagent.quantity}} (C:{{reagent.ipValues.combat}}, U:{{reagent.ipValues.utility}}, E:{{reagent.ipValues.entropy}}, E:{{reagent.essence}})</span>
+                        </div>
+                    </div>
+                {{/each}}
+            {{else}}
+                <p class="no-reagents">No reagents available.</p>
+            {{/if}}
+        </div>
     </section>
-</div>
+</form>

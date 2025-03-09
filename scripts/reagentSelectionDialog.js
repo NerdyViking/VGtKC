@@ -1,148 +1,149 @@
 /**
- * Handles the reagent selection dialog for the crafting system.
+ * Dialog for selecting reagents from an actor's inventory, styled as an ItemSheet.
  */
+
+console.log("reagentSelectionDialog.js loaded");
+
 import { getReagents } from "./utils.js";
 
-export class ReagentSelectionDialog extends Application {
-    constructor(actor, callback, selectedReagents = []) {
-        super();
-        this.actor = actor;
+export class ReagentSelectionDialog extends ItemSheet {
+    constructor(actor, callback, preselectedReagents = [], options = {}) {
+        const dummyItemData = { name: "Reagent Selection", type: "consumable", ownership: { default: 2 } };
+        const dummyItem = new Item(dummyItemData, { parent: actor });
+        super(dummyItem, { actor, ...options });
+        this._actor = actor;
         this.callback = callback;
-        this.selectedReagents = selectedReagents;
-        this.reagents = getReagents(actor);
-        this.filteredReagents = [...this.reagents];
-        this.searchQuery = "";
-        this.sortCriterion = "name-asc";
-        this.debounceTimeout = null;
-        this.wasSearchFocused = false;
-        this.filterReagents();
+        this.preselectedReagents = preselectedReagents || [];
+        this._isSheetClosing = false; // Track sheet closure
     }
 
-    /* === Configuration === */
     static get defaultOptions() {
         return foundry.utils.mergeObject(super.defaultOptions, {
             id: "reagent-selection-dialog",
             title: "Select a Reagent",
             template: "modules/vikarovs-guide-to-kaeliduran-crafting/templates/reagent-selection.hbs",
             width: 500,
-            height: 500,
-            classes: ["reagent-selection-dialog", "dnd5e2", "sheet", "item"],
-            resizable: false
+            height: 400,
+            resizable: true,
+            classes: ["dnd5e2", "sheet", "item", "reagent-selection", "unique-reagent-dialog"]
         });
     }
 
-    /* -- Header Buttons -- */
+    async getData() {
+        if (!this._actor) {
+            console.error("ReagentSelectionDialog: No actor provided.");
+            return { reagents: [], hasReagents: false };
+        }
+        const reagents = getReagents(this._actor) || [];
+        // Filter out items already slotted in preselectedReagents
+        const slottedIds = this.preselectedReagents
+            .filter(r => r !== null && r.id)
+            .map(r => r.id);
+        const reagentData = reagents
+            .filter(item => !slottedIds.includes(item.id))
+            .map(item => ({
+                id: item.id,
+                name: item.name,
+                img: item.img,
+                quantity: item.system.quantity || 1,
+                isSelected: this.preselectedReagents.some(r => r && r.id === item.id),
+                ipValues: item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "ipValues") || { combat: 0, utility: 0, entropy: 0 },
+                essence: item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "essence") || "None"
+            }));
+        console.log("ReagentSelectionDialog getData:", { reagents: reagentData, hasReagents: reagentData.length > 0 });
+        return {
+            reagents: reagentData,
+            hasReagents: reagentData.length > 0
+        };
+    }
+
     _getHeaderButtons() {
-        return super._getHeaderButtons().map(button => {
-            if (button.class === "close") button.label = "";
-            return button;
-        });
-    }
-
-    /* === Data Preparation === */
-    getData() {
-        const filteredReagents = this.filteredReagents.map(reagent => {
-            const essence = reagent.getFlag("vikarovs-guide-to-kaeliduran-crafting", "essence") || "None";
-            const ipValues = reagent.getFlag("vikarovs-guide-to-kaeliduran-crafting", "ipValues") || { combat: 0, utility: 0, entropy: 0 };
-            const embeddedItem = this.actor.items.get(reagent.id);
+        const buttons = super._getHeaderButtons();
+        return buttons.map(button => {
+            if (button.class === "close") {
+                return {
+                    ...button,
+                    label: "",
+                    icon: "fas fa-times",
+                    onclick: (event) => {
+                        this._isSheetClosing = true; // Mark as closing
+                        this.close();
+                    }
+                };
+            }
             return {
-                ...reagent,
-                _id: embeddedItem ? embeddedItem.id : reagent.id,
-                essence,
-                combat: Number(ipValues.combat) || 0,
-                utility: Number(ipValues.utility) || 0,
-                entropy: Number(ipValues.entropy) || 0
+                ...button,
+                label: ""
             };
         });
-
-        filteredReagents.sort((a, b) => {
-            const [key, direction] = this.sortCriterion.split('-');
-            let comparison = 0;
-            if (key === "name") comparison = a.name.localeCompare(b.name);
-            else if (key === "essence") comparison = a.essence.localeCompare(b.essence);
-            else if (key === "combat") comparison = a.combat - b.combat;
-            else if (key === "utility") comparison = a.utility - b.utility;
-            else if (key === "entropy") comparison = a.entropy - b.entropy;
-            return direction === "asc" ? comparison : -comparison;
-        });
-
-        return { filteredReagents, searchQuery: this.searchQuery, sortCriterion: this.sortCriterion };
     }
 
-    /* === Filtering Logic === */
-    filterReagents() {
-        let filtered = [...this.reagents];
-        const selectedNames = this.selectedReagents.filter(r => r !== null).map(r => r.name.toLowerCase());
-        filtered = filtered.filter(r => !selectedNames.includes(r.name.toLowerCase()));
-        if (this.searchQuery) {
-            filtered = filtered.filter(r => {
-                const name = r.name.toLowerCase();
-                const essence = (r.getFlag("vikarovs-guide-to-kaeliduran-crafting", "essence") || "None").toLowerCase();
-                return name.includes(this.searchQuery) || essence.includes(this.searchQuery);
-            });
-        }
-        this.filteredReagents = filtered;
-        this.sortReagents();
-    }
-
-    /* === Sorting Logic === */
-    sortReagents() {
-        this.filteredReagents.sort((a, b) => {
-            const [key, direction] = this.sortCriterion.split('-');
-            let comparison = 0;
-            if (key === "name") comparison = a.name.localeCompare(b.name);
-            else if (key === "essence") comparison = (a.getFlag("vikarovs-guide-to-kaeliduran-crafting", "essence") || "None").localeCompare(b.getFlag("vikarovs-guide-to-kaeliduran-crafting", "essence") || "None");
-            else {
-                const aIP = a.getFlag("vikarovs-guide-to-kaeliduran-crafting", "ipValues") || { combat: 0, utility: 0, entropy: 0 };
-                const bIP = b.getFlag("vikarovs-guide-to-kaeliduran-crafting", "ipValues") || { combat: 0, utility: 0, entropy: 0 };
-                if (key === "combat") comparison = (Number(aIP.combat) || 0) - (Number(bIP.combat) || 0);
-                else if (key === "utility") comparison = (Number(aIP.utility) || 0) - (Number(bIP.utility) || 0);
-                else if (key === "entropy") comparison = (Number(aIP.entropy) || 0) - (Number(bIP.entropy) || 0);
-            }
-            return direction === "asc" ? comparison : -comparison;
-        });
-    }
-
-    /* === Event Listeners === */
     activateListeners(html) {
         super.activateListeners(html);
+        const $ = foundry.utils.jQuery || window.jQuery;
 
-        html.find(".reagent-entry").on("click", async (event) => {
-            const itemId = event.currentTarget.dataset.itemId;
-            const selectedItem = this.actor.items.get(itemId);
-            if (selectedItem) {
-                await super.close();
-                await this.callback(selectedItem);
+        html.find('.reagent-entry').on("click", (event) => {
+            const itemId = $(event.currentTarget).data('item-id');
+            const item = this._actor.items.get(itemId);
+            if (item) {
+                console.log("Selected reagent:", item);
+                this.callback(item);
+                this.close();
+            } else {
+                console.error("ReagentSelectionDialog: Item not found for id:", itemId);
             }
         });
 
-        const searchInput = html.find(".reagent-search");
-        searchInput.val(this.searchQuery);
-
-        searchInput.on("focus", () => this.wasSearchFocused = true);
-        searchInput.on("blur", () => this.wasSearchFocused = false);
-        searchInput.on("input", (event) => {
-            this.searchQuery = event.currentTarget.value.trim().toLowerCase();
-            if (this.debounceTimeout) clearTimeout(this.debounceTimeout);
-            this.debounceTimeout = setTimeout(() => {
-                const wasFocused = this.wasSearchFocused;
-                this.filterReagents();
-                this.render(false);
-                if (wasFocused) {
-                    setTimeout(() => {
-                        const newSearchInput = this.element.find(".reagent-search");
-                        newSearchInput.focus();
-                        const value = newSearchInput.val();
-                        newSearchInput[0].setSelectionRange(value.length, value.length);
-                    }, 0);
-                }
-            }, 300);
+        html.find('.reagent-search').on("input", (event) => {
+            const query = $(event.currentTarget).val().toLowerCase();
+            const $entries = html.find('.reagent-entry');
+            $entries.each((index, element) => {
+                const $element = $(element);
+                const name = $element.data('item-name').toLowerCase();
+                $element.toggle(name.includes(query));
+            });
+            const visibleEntries = $entries.filter(':visible');
+            if (visibleEntries.length === 0) {
+                html.find('.reagent-list').append('<p class="no-reagents">No reagents match your search.</p>');
+            } else {
+                html.find('.no-reagents').remove();
+            }
         });
 
-        html.find(".sort-select").on("change", (event) => {
-            this.sortCriterion = event.currentTarget.value;
-            this.sortReagents();
-            this.render(false);
+        html.find('.sort-select').on("change", (event) => {
+            const sortBy = $(event.currentTarget).val();
+            const $entries = html.find('.reagent-entry');
+            const entriesData = $entries.map((index, element) => ({
+                $element: $(element),
+                name: $(element).data('item-name'),
+                quantity: parseInt($(element).find('.reagent-details').text().match(/Qty: (\d+)/)?.[1]) || 0
+            })).get();
+
+            if (sortBy === "name") {
+                entriesData.sort((a, b) => a.name.localeCompare(b.name));
+            } else if (sortBy === "quantity") {
+                entriesData.sort((a, b) => b.quantity - a.quantity);
+            }
+
+            $entries.detach().sort((a, b) => {
+                const aIndex = entriesData.findIndex(e => e.$element.is(a));
+                const bIndex = entriesData.findIndex(e => e.$element.is(b));
+                return aIndex - bIndex;
+            }).appendTo(html.find('.reagent-list'));
         });
+    }
+
+    async _onClose(...args) {
+        console.log("ReagentSelectionDialog closing, isSheetClosing:", this._isSheetClosing);
+        if (!this._isSheetClosing) {
+            // Only clean up if closed manually, not by sheet closure
+            this.callback(null); // Signal no selection if closed without choosing
+        }
+        return super._onClose(...args);
+    }
+
+    async _updateObject(event, formData) {
+        // Override to prevent button requirement error; no form submission needed
+        return;
     }
 }

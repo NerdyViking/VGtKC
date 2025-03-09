@@ -1,0 +1,127 @@
+/* Crafting Compendium Styles (Magic Item Recipes) */
+
+/* General Layout and Structure */
+.window-app.crafting-compendium .sheet-header h1.charname {
+    text-align: center;
+    width: 100%;
+    position: relative;
+}
+
+.window-app.crafting-compendium .window-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 5px;
+}
+
+.window-app.crafting-compendium .window-header a.header-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    margin-left: 5px;
+    padding: 0;
+}
+
+.window-app.crafting-compendium .window-header a.header-button i {
+    margin: 0;
+}
+
+/* Recipe List */
+.window-app.crafting-compendium .recipe-list {
+    padding: 10px;
+}
+
+.window-app.crafting-compendium .recipe-entry {
+    margin-bottom: 15px;
+    border: 1px solid #4b4a44;
+    padding: 5px;
+    border-radius: 3px;
+}
+
+.window-app.crafting-compendium .recipe-component {
+    font-size: 18px;
+    font-weight: bold;
+    color: #f0f0e0;
+    margin-bottom: 5px;
+    font-family: var(--font-primary, "Modesto Condensed", "Palatino Linotype", serif);
+}
+
+.window-app.crafting-compendium .recipe-outcomes {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.window-app.crafting-compendium .outcome-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.window-app.crafting-compendium .item-icon {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    border: 1px solid #4b4a44;
+    border-radius: 3px;
+}
+
+.window-app.crafting-compendium .outcome-link {
+    cursor: pointer;
+    color: #f0f0e0;
+}
+
+.window-app.crafting-compendium .outcome-link:hover {
+    color: #ffd700;
+}
+
+/* Edit Mode */
+.window-app.crafting-compendium .new-recipe-btn {
+    background: rgba(0, 128, 0, 0.6);
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    cursor: pointer;
+    margin: 10px 0;
+}
+
+.window-app.crafting-compendium .new-recipe-btn:hover {
+    background: rgba(0, 128, 0, 0.8);
+}
+
+.window-app.crafting-compendium.edit-mode .recipe-entry {
+    border: 1px dashed #ff0;
+}
+
+.window-app.crafting-compendium.edit-mode .edit-mode-indicator {
+    font-size: 20px;
+    color: #ffd700;
+    text-shadow: 1px 1px 2px #000;
+    display: inline-block;
+}
+
+/* Recipe Editor */
+.window-app.crafting-compendium .recipe-editor {
+    padding: 10px;
+}
+
+.window-app.crafting-compendium .outcome-slot {
+    width: 50px;
+    height: 50px;
+    border: 1px solid #4b4a44;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 5px;
+}
+
+.window-app.crafting-compendium .unidentified-description {
+    width: 100%;
+    padding: 5px;
+    background: #2e2e2e;
+    color: #f0f0e0;
+    border: 1px solid #4b4a44;
+    border-radius: 3px;
+}

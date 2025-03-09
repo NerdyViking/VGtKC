@@ -1,381 +1,155 @@
 /**
- * Handles reagent-related logic for the crafting system, including IP calculations and crafting outcomes.
+ * Handles reagent-related data and subtype registration for the alchemy system.
+ */
+
+/**
+ * Calculates the total Influence Points (IP) sums for selected reagents.
+ * @param {Object} craftingState - The current crafting state with selected reagents.
+ * @returns {Object} Sums of combat, utility, and entropy IPs.
  */
 export function calculateIPSums(craftingState) {
-    /* === IP Summation === */
     const sums = { combat: 0, utility: 0, entropy: 0 };
-    craftingState.selectedReagents.forEach(reagent => {
+    craftingState.selectedReagents.forEach((reagent, index) => {
         if (reagent) {
             const ipValues = reagent.getFlag("vikarovs-guide-to-kaeliduran-crafting", "ipValues") || { combat: 0, utility: 0, entropy: 0 };
             sums.combat += Number(ipValues.combat) || 0;
             sums.utility += Number(ipValues.utility) || 0;
             sums.entropy += Number(ipValues.entropy) || 0;
+        } else {
         }
     });
     return sums;
 }
 
+/**
+ * Determines the crafting outcome based on Influence Points.
+ * @param {Object} actor - The actor performing the crafting.
+ * @param {Object} craftingState - The current crafting state.
+ * @returns {Object} Outcome data including dominant categories and tiebreaker status.
+ */
 export function determineOutcome(actor, craftingState) {
-    /* === Outcome Determination === */
     const ipSums = calculateIPSums(craftingState);
-    const maxSum = Math.max(ipSums.combat, ipSums.utility, ipSums.entropy);
+    const outcome = { combat: 0, utility: 0, entropy: 0, hasTiebreaker: false, outcomes: [], selectedOutcome: craftingState.selectedOutcome };
+    const maxPoints = Math.max(ipSums.combat, ipSums.utility, ipSums.entropy);
 
-    // If all IP sums are zero, return no outcome and no tiebreaker
-    if (maxSum === 0) {
-        return { hasTiebreaker: false, outcomeKnown: false, outcomeCategory: null, outcomeTooltip: "No reagents selected" };
+    if (maxPoints === 0) {
+        return outcome;
     }
 
-    const categories = [];
-    if (ipSums.combat === maxSum) categories.push({ category: "combat", sum: maxSum });
-    if (ipSums.utility === maxSum) categories.push({ category: "utility", sum: maxSum });
-    if (ipSums.entropy === maxSum) categories.push({ category: "entropy", sum: maxSum });
+    const dominantCategories = [];
+    if (ipSums.combat === maxPoints) dominantCategories.push("combat");
+    if (ipSums.utility === maxPoints) dominantCategories.push("utility");
+    if (ipSums.entropy === maxPoints) dominantCategories.push("entropy");
 
-    if (!actor) return { hasTiebreaker: false, outcomeKnown: false, outcomeCategory: null, outcomeTooltip: "Error: Actor data missing" };
+    outcome.combat = ipSums.combat;
+    outcome.utility = ipSums.utility;
+    outcome.entropy = ipSums.entropy;
 
-    let knownOutcomes = actor.getFlag("vikarovs-guide-to-kaeliduran-crafting", "knownCraftingOutcomes") || { Combat: [], Utility: [], Entropy: [] };
-
-    // Ensure all categories exist
-    knownOutcomes = {
-        Combat: knownOutcomes.Combat || [],
-        Utility: knownOutcomes.Utility || [],
-        Entropy: knownOutcomes.Entropy || []
-    };
-
-    if (categories.length > 1) {
-        const outcomes = game.settings.get('vikarovs-guide-to-kaeliduran-crafting', 'consumableOutcomes');
-        const tiebreakerOutcomes = categories.map(cat => {
-            const categoryKey = cat.category.charAt(0).toUpperCase() + cat.category.slice(1);
-            const isKnown = knownOutcomes[categoryKey].some(entry => Number(entry.sum) === cat.sum);
-            const itemId = outcomes[categoryKey] && outcomes[categoryKey][cat.sum] ? outcomes[categoryKey][cat.sum] : null;
-            let itemImg = null;
-            if (itemId) {
-                const item = game.items.get(itemId) || actor.items.get(itemId); // Try world or actor items
-                if (item) {
-                    itemImg = item.img; // Use the item's image if found
-                }
-            }
-            let tooltip = isKnown ? `Known ${cat.category} consumable (Sum: ${cat.sum})` : "Unknown Outcome";
-            if (itemId) {
-                tooltip += " - Click to view item";
-            }
-            return {
-                category: cat.category,
-                sum: cat.sum,
-                known: isKnown,
-                tooltip: tooltip,
-                selected: craftingState.selectedOutcome === cat.category,
-                itemId: itemId,
-                itemImg: itemImg // Add item image URL
-            };
-        });
-        return { hasTiebreaker: true, tiebreakerOutcomes };
-    } else if (categories.length === 0) {
-        return { hasTiebreaker: false, outcomeKnown: false, outcomeCategory: null, outcomeTooltip: "No outcome determined (IP sums are all zero)" };
+    if (dominantCategories.length === 1) {
+        outcome.outcomes = [dominantCategories[0]];
     } else {
-        const category = categories[0].category;
-        const sum = categories[0].sum;
-        const categoryKey = category.charAt(0).toUpperCase() + category.slice(1);
-        const isKnown = knownOutcomes[categoryKey].some(entry => Number(entry.sum) === sum);
-        return {
-            hasTiebreaker: false,
-            outcomeKnown: isKnown,
-            outcomeCategory: category,
-            outcomeTooltip: isKnown ? `Known ${category} consumable (Sum: ${sum})` : "Unknown Outcome"
-        };
+        outcome.hasTiebreaker = true;
+        outcome.outcomes = dominantCategories;
     }
+
+    return outcome;
 }
 
+/**
+ * Handles the crafting process, creating the outcome item and resetting the crafting state.
+ * @param {Object} app - The actor sheet application.
+ * @param {Object} craftingState - The current crafting state.
+ * @param {Function} calculateIPSums - Function to calculate IP sums.
+ * @param {Function} determineOutcome - Function to determine the crafting outcome.
+ * @param {Function} renderCraftingTab - Function to render the crafting tab.
+ * @param {Object} html - The HTML content of the actor sheet.
+ */
 export async function handleCrafting(app, craftingState, calculateIPSums, determineOutcome, renderCraftingTab, html) {
-    /* === Crafting Execution === */
-    let actor = null;
-    if (app instanceof ActorSheet) {
-        actor = app.actor;
-    } else if (app?.object?.actor) {
-        actor = app.object.actor;
+    const outcomeData = determineOutcome(craftingState.actor, craftingState);
+    if (!outcomeData.outcomes.length) {
+        ui.notifications.warn("No outcome determined. Please select reagents with Influence Points.");
+        return;
+    }
+
+    if (outcomeData.hasTiebreaker && !craftingState.selectedOutcome) {
+        ui.notifications.warn("Please select an outcome from the tiebreaker options.");
+        return;
+    }
+
+    const selectedCategory = outcomeData.hasTiebreaker ? craftingState.selectedOutcome : outcomeData.outcomes[0];
+    let outcomeItem;
+
+    if (selectedCategory === "combat") {
+        outcomeItem = await game.packs.get("vikarovs-guide-to-kaeliduran-crafting.combat-outcomes").getDocument("combatOutcome");
+    } else if (selectedCategory === "utility") {
+        outcomeItem = await game.packs.get("vikarovs-guide-to-kaeliduran-crafting.utility-outcomes").getDocument("utilityOutcome");
+    } else if (selectedCategory === "entropy") {
+        outcomeItem = await game.packs.get("vikarovs-guide-to-kaeliduran-crafting.entropy-outcomes").getDocument("entropyOutcome");
+    }
+
+    if (outcomeItem) {
+        await craftingState.actor.createEmbeddedDocuments("Item", [outcomeItem.toObject()]);
+        ui.notifications.info(`Crafted ${outcomeItem.name}!`);
     } else {
-        // Fallback: Try to find the actor sheet from the current UI context
-        const actorSheet = Object.values(ui.windows).find(w => w instanceof ActorSheet && w.actor);
-        actor = actorSheet?.actor || null;
+        ui.notifications.error("Failed to craft item: Outcome item not found.");
     }
 
-    if (!actor) {
-        ui.notifications.error("Crafting failed: No valid actor detected.");
-        return;
-    }
-
-    if (craftingState.selectedReagents.length !== 3 || craftingState.selectedReagents.some(r => !r)) {
-        ui.notifications.error("You must select exactly 3 reagents to craft!");
-        return;
-    }
-
-    const outcomeData = determineOutcome(actor, craftingState);
-    if (!outcomeData || typeof outcomeData !== "object") {
-        ui.notifications.error("Crafting failed: Outcome could not be determined.");
-        return;
-    }
-
-    const selectedCategory = outcomeData.hasTiebreaker ? craftingState.selectedOutcome : outcomeData.outcomeCategory;
-    if (!selectedCategory) {
-        ui.notifications.error("Please select a crafting outcome!");
-        return;
-    }
-
-    const ipSums = calculateIPSums(craftingState);
-    const maxSum = Math.max(ipSums.combat, ipSums.utility, ipSums.entropy);
-    const initialRarity = getRarity(maxSum);
-
-    const baseCost = { common: 50, uncommon: 200, rare: 2000, veryRare: 20000, legendary: 100000 }[initialRarity];
-    const reagentCost = craftingState.selectedReagents.reduce((total, r) => {
-        const rarity = (r.system.rarity || "common").toLowerCase();
-        const cost = { common: 10, uncommon: 50, rare: 600, veryRare: 6000, legendary: 50000 }[rarity];
-        return total + (cost || 0); // Ensure cost is a number
-    }, 0);
-
-    // Calculate the base gold cost, then add a minimum cost (e.g., 10% of baseCost)
-    const minimumGoldCost = Math.floor(baseCost * 0.1); // 10% of the base cost as a minimum
-    const baseGoldCost = Math.max(0, baseCost - reagentCost);
-    const goldCost = Math.max(minimumGoldCost, baseGoldCost);
-    const currentGold = Number(actor.system.currency?.gp) || 0;
-
-    if (currentGold < goldCost) {
-        ui.notifications.error(`Insufficient gold! Need ${goldCost} gp, have ${currentGold} gp.`);
-        return;
-    }
-
-    const dc = { common: 10, uncommon: 15, rare: 20, veryRare: 25, legendary: 30 }[initialRarity];
-
-    // Validate the tool key
-    const toolKey = "alchemist";
-    if (!CONFIG.DND5E.toolIds[toolKey]) {
-        ui.notifications.error("Alchemist's Supplies tool not found in system configuration!");
-        return;
-    }
-
-    // Check for the tool item in the actor's inventory
-    const toolItem = actor.items.find(i => i.type === "tool" && (i.system.identifier === "alchemist" || i.name.toLowerCase() === "alchemist's supplies"));
-
-    // Build options object with minimal required properties
-    const options = {
-        dc: dc,
-        rollMode: "publicroll",
-        fastForward: false,
-    };
-
-    // Update tool proficiency to link to the item and set ability
-    if (toolItem) {
-        const toolProficiency = actor.system.tools?.[toolKey] || { value: 0 };
-        const updatedProficiency = {
-            value: toolProficiency.value || 0,
-            ability: toolItem.system?.ability || CONFIG.DND5E.toolIds[toolKey]?.ability || "int",
-            itemId: toolItem.id
-        };
-        await actor.update({ [`system.tools.${toolKey}`]: updatedProficiency });
-    }
-
-    if (!toolItem) {
-        ui.notifications.error("Alchemist's Supplies tool item not found in inventory! Crafting requires this tool.");
-        return;
-    }
-
-    // Trigger the roll and capture the result directly from rollToolCheck
-    let rollTotal = null;
-    try {
-        const rollResult = await toolItem.rollToolCheck(options);
-        if (rollResult && Array.isArray(rollResult) && rollResult.length > 0 && rollResult[0]?.total != null) {
-            rollTotal = rollResult[0].total;
-        } else {
-            throw new Error("Invalid roll result returned from rollToolCheck.");
-        }
-    } catch (err) {
-        ui.notifications.error(`Failed to determine tool check result: ${err.message}`);
-        return;
-    }
-
-    if (rollTotal === null) return;
-
-    if (rollTotal === null) {
-        ui.notifications.error("Failed to determine tool check result. Roll total is null.");
-        return;
-    }
-
-    let finalSum = maxSum;
-    let quantity = 1;
-    const margin = rollTotal - dc;
-
-    if (margin >= 10) {
-        quantity = 2;
-    } else if (margin >= 0) {
-        quantity = 1;
-    } else if (margin >= -9) {
-        const reduction = new Roll("1d4");
-        await reduction.roll(); // Evaluates the roll
-        finalSum = Math.max(1, maxSum - reduction.total);
-        await reduction.toMessage({ flavor: "Reduction to IP sum due to crafting failure (near miss)" });
+    craftingState.selectedReagents = [null, null, null];
+    craftingState.selectedOutcome = null;
+    if (app.updateCraftingUI) {
+        await app.updateCraftingUI();
     } else {
-        const reduction = new Roll("2d4");
-        await reduction.roll(); // Evaluates the roll
-        finalSum = Math.max(1, maxSum - reduction.total);
-        await reduction.toMessage({ flavor: "Reduction to IP sum due to crafting failure (large miss)" });
-    }
-
-    let finalCategory = selectedCategory;
-    if (finalSum !== maxSum) {
-        const newSums = { combat: ipSums.combat, utility: ipSums.utility, entropy: ipSums.entropy };
-        if (selectedCategory === "combat") newSums.combat = finalSum;
-        else if (selectedCategory === "utility") newSums.utility = finalSum;
-        else newSums.entropy = finalSum;
-
-        const newMaxSum = Math.max(newSums.combat, newSums.utility, newSums.entropy);
-        const newCategories = [];
-        if (newSums.combat === newMaxSum) newCategories.push("combat");
-        if (newSums.utility === newMaxSum) newCategories.push("utility");
-        if (newSums.entropy === newMaxSum) newCategories.push("entropy");
-
-        if (!newCategories.includes(selectedCategory)) {
-            finalCategory = newCategories.length > 0 ? newCategories[0] : selectedCategory;
-        }
-    }
-
-    const outcomeCategoryKey = finalCategory.charAt(0).toUpperCase() + finalCategory.slice(1);
-    let knownOutcomes = actor.getFlag("vikarovs-guide-to-kaeliduran-crafting", "knownCraftingOutcomes") || { Combat: [], Utility: [], Entropy: [] };
-
-    // Ensure all categories exist
-    knownOutcomes = {
-        Combat: knownOutcomes.Combat || [],
-        Utility: knownOutcomes.Utility || [],
-        Entropy: knownOutcomes.Entropy || []
-    };
-
-    // Check for predefined outcome in game settings
-    const outcomes = game.settings.get('vikarovs-guide-to-kaeliduran-crafting', 'consumableOutcomes');
-    const predefinedItemId = outcomes[outcomeCategoryKey][finalSum];
-    let consumableData;
-
-    if (predefinedItemId) {
-        const predefinedItem = game.items.get(predefinedItemId);
-        if (predefinedItem) {
-            // Clone predefined item and adjust quantity
-            consumableData = foundry.utils.deepClone(predefinedItem.toObject());
-            consumableData.system.quantity = quantity;
-        }
-    }
-
-    // Fallback to generic consumable if no predefined item
-    if (!consumableData) {
-        const finalRarity = getRarity(finalSum);
-        const consumableName = `${finalRarity} ${outcomeCategoryKey} Consumable`;
-        consumableData = {
-            name: consumableName,
-            type: "consumable",
-            system: {
-                description: { value: `A ${finalRarity.toLowerCase()} ${finalCategory} consumable crafted via alchemy.` },
-                quantity,
-                rarity: finalRarity.toLowerCase(),
-                consumableType: "potion",
-                uses: { value: 1, max: 1, per: "charges", autoDestroy: true }
-            }
-        };
-    }
-
-    // Create the crafted item and update known outcomes
-    try {
-        const createdItems = await actor.createEmbeddedDocuments("Item", [consumableData]);
-        ui.notifications.info(`You crafted ${quantity} ${consumableData.name}(s)!`);
-
-        // Update known outcomes only if not already known
-        if (!knownOutcomes[outcomeCategoryKey].some(entry => Number(entry.sum) === finalSum)) {
-            const newEntry = { sum: finalSum, itemId: createdItems[0].id };
-            knownOutcomes[outcomeCategoryKey] = [...knownOutcomes[outcomeCategoryKey], newEntry];
-            await actor.setFlag("vikarovs-guide-to-kaeliduran-crafting", "knownCraftingOutcomes", knownOutcomes);
-        }
-    } catch (error) {
-        ui.notifications.error("Failed to create crafted item.");
-        return; // Stop execution if item creation fails
-    }
-
-    // Consume reagents after creating the item
-    try {
-        await consumeReagents(actor, craftingState.selectedReagents);
-    } catch (error) {
-        ui.notifications.error("Failed to consume reagents.");
-    }
-
-    // Deduct gold cost
-    try {
-        const newGold = Math.max(0, currentGold - goldCost);
-        const currencyUpdate = { ...actor.system.currency, gp: newGold };
-        await actor.update({ "system.currency": currencyUpdate });
-        const updatedGold = Number(actor.system.currency?.gp) || 0;
-        if (updatedGold !== newGold) {
-            ui.notifications.error("Failed to deduct gold cost correctly.");
-        }
-    } catch (error) {
-        ui.notifications.error("Failed to deduct gold cost.");
-    }
-
-    // Reset crafting state and re-render the tab
-    try {
-        craftingState.selectedReagents = [null, null, null];
-        craftingState.selectedOutcome = null;
-
-        // Recreate reagentSlotClickHandler if it's not available
-        const reagentSlotClickHandler = app.craftingUI?.reagentSlotClickHandler || (async (event, updateCraftingUI) => {
-            if (event && typeof event.preventDefault === "function") {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-            const slotIndex = event.currentTarget.dataset.slot;
-            const actor = game.actors.get(game.user.character?.id);
-            if (!actor) {
-                ui.notifications.error("No valid actor found.");
-                return;
-            }
-
-            const app = Object.values(ui.windows).find(w => w.actor === actor && w instanceof ActorSheet);
-            if (!app?.craftingState) return;
-
-            new ReagentSelectionDialog(actor, async (selectedItem) => {
-                app.craftingState.selectedReagents[slotIndex] = selectedItem;
-                if (updateCraftingUI) await updateCraftingUI();
-            }, app.craftingState.selectedReagents).render(true);
-        });
-
-        await renderCraftingTab(app, html, { actor: app.actor }, calculateIPSums, determineOutcome, reagentSlotClickHandler, handleCrafting);
-        if (app.updateCraftingUI) {
-            await app.updateCraftingUI();
-        }
-    } catch (error) {
-        ui.notifications.error("Failed to reset crafting state and re-render tab.");
+        await renderCraftingTab(app, html, { actor: craftingState.actor }, calculateIPSums, determineOutcome, () => {}, handleCrafting, app.updateCraftingUI);
     }
 }
 
-/* === Helper Functions === */
-function getRarity(sum) {
-    if (sum <= 12) return "common";
-    if (sum <= 21) return "uncommon";
-    if (sum <= 27) return "rare";
-    if (sum <= 30) return "veryRare";
-    return "legendary";
-}
+/**
+ * Registers the 'reagent' subtype for loot items during module setup.
+ * Called from hooks.js on 'setup'.
+ */
+export function registerReagentSubtype() {
+    // Ensure CONFIG.DND5E is defined and initialized
+    if (!CONFIG.DND5E) {
+        CONFIG.DND5E = CONFIG.DND5E || {};
+    }
+    if (!CONFIG.DND5E.itemTypes) {
+        CONFIG.DND5E.itemTypes = {};
+    }
+    if (!CONFIG.DND5E.itemTypes.loot) {
+        CONFIG.DND5E.itemTypes.loot = [];
+    } else if (!Array.isArray(CONFIG.DND5E.itemTypes.loot)) {
+        CONFIG.DND5E.itemTypes.loot = Array.from(new Set(CONFIG.DND5E.itemTypes.loot));
+    }
+    if (!CONFIG.DND5E.itemTypes.loot.includes("reagent")) {
+        CONFIG.DND5E.itemTypes.loot.push("reagent");
+    }
 
-async function consumeReagents(actor, reagents) {
-    const updates = [];
-    const deletions = [];
-    for (const reagent of reagents) {
-        const newQuantity = (reagent.system.quantity || 1) - 1;
-        if (newQuantity <= 0) {
-            deletions.push(reagent.id);
-        } else {
-            updates.push({
-                _id: reagent.id,
-                "system.quantity": newQuantity
-            });
-        }
+    // Ensure the subtype has a label for the UI
+    if (!CONFIG.DND5E.itemTypeLabels) {
+        CONFIG.DND5E.itemTypeLabels = {};
     }
-    if (updates.length) {
-        await actor.updateEmbeddedDocuments("Item", updates);
+    if (!CONFIG.DND5E.itemTypeLabels.reagent) {
+        CONFIG.DND5E.itemTypeLabels.reagent = "Reagent";
     }
-    if (deletions.length) {
-        await actor.deleteEmbeddedDocuments("Item", deletions);
+
+    // Fallback: Attempt to add to CONFIG.Item.type (less likely to work with DND5E)
+    if (!CONFIG.Item) {
+        CONFIG.Item = {};
+    }
+    if (!CONFIG.Item.type) {
+        CONFIG.Item.type = [];
+    } else if (!Array.isArray(CONFIG.Item.type)) {
+        CONFIG.Item.type = Array.from(new Set(CONFIG.Item.type));
+    }
+    if (!CONFIG.Item.type.includes("reagent")) {
+        CONFIG.Item.type.push("reagent");
+    }
+
+    // Add label for fallback
+    if (!CONFIG.Item.typeLabels) {
+        CONFIG.Item.typeLabels = {};
+    }
+    if (!CONFIG.Item.typeLabels.reagent) {
+        CONFIG.Item.typeLabels.reagent = "Reagent";
     }
 }

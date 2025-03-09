@@ -1,0 +1,48 @@
+/* Magic Item Crafting placeholder styles */
+.magic-crafting {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.magic-crafting h2 {
+    font-size: 24px;
+    color: #f0f0e0;
+    font-family: var(--font-primary, "Modesto Condensed", "Palatino Linotype", serif);
+}
+
+.component-slot {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid rgba(255, 255, 256, 0.2);
+    background: rgba(0, 0, 0, 0.5);
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+    line-height: 50px;
+    cursor: pointer;
+    margin: 10px auto;
+}
+
+.component-slot:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.craftable-items {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.craft-item {
+    width: 50px;
+    height: 50px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #4b4a44;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f0f0e0;
+}

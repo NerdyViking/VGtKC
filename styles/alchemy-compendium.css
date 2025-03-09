@@ -1,0 +1,217 @@
+/* Alchemy Compendium Styles */
+
+/* General Layout and Structure */
+.window-app.alchemy-compendium .sheet-header h1.charname {
+    text-align: center;
+    width: 100%;
+    position: relative;
+}
+
+.window-app.alchemy-compendium .window-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 5px;
+}
+
+.window-app.alchemy-compendium .window-header a.header-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    margin-left: 5px;
+    padding: 0;
+}
+
+.window-app.alchemy-compendium .window-header a.header-button i {
+    margin: 0;
+}
+
+/* Tab Navigation */
+.window-app.alchemy-compendium .compendium-tabs .item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+}
+
+.window-app.alchemy-compendium .compendium-tabs .item i {
+    margin-right: 5px;
+    text-indent: 0; /* Ensure icons are not indented */
+}
+
+.window-app.alchemy-compendium .compendium-tabs .item img,
+.window-app.alchemy-compendium .compendium-tabs .tab-icon {
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+}
+
+.window-app.alchemy-compendium .compendium-tabs .item[data-tab="combat"] i {
+    color: #ff5555;
+    border: 2px solid rgba(255, 85, 85, 0.3);
+}
+
+.window-app.alchemy-compendium .compendium-tabs .item[data-tab="utility"] i {
+    color: #55ff55;
+    border: 2px solid rgba(85, 255, 85, 0.3);
+}
+
+.window-app.alchemy-compendium .compendium-tabs .item[data-tab="entropy"] i {
+    color: #aa00ff;
+    border: 2px solid rgba(170, 0, 255, 0.3);
+}
+
+/* Rarity Layout */
+.window-app.alchemy-compendium .rarity-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.window-app.alchemy-compendium .rarity-group {
+    padding: 10px;
+}
+
+.window-app.alchemy-compendium .rarity-row:first-child .rarity-group {
+    flex: 1;
+    min-width: 300px;
+}
+
+.window-app.alchemy-compendium .rarity-row:last-child .rarity-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.window-app.alchemy-compendium .rarity-label {
+    font-size: 24px;
+    font-weight: bold;
+    color: #f0f0e0;
+    text-align: center;
+    margin-bottom: 10px;
+    font-family: var(--font-primary, "Modesto Condensed", "Palatino Linotype", serif);
+}
+
+/* Rarity Group Borders */
+.window-app.alchemy-compendium .common-group {
+    border: 2px solid #000000;
+}
+
+.window-app.alchemy-compendium .uncommon-group {
+    border: 2px solid #00ff00;
+}
+
+.window-app.alchemy-compendium .rare-group {
+    border: 2px solid #0000ff;
+}
+
+.window-app.alchemy-compendium .veryRare-group {
+    border: 2px solid #800080;
+}
+
+.window-app.alchemy-compendium .legendary-group {
+    border: 2px solid #ffa500;
+}
+
+/* Grid Layouts */
+.window-app.alchemy-compendium .outcomes-grid {
+    display: grid;
+    gap: 10px;
+}
+
+.window-app.alchemy-compendium .outcomes-grid.common-grid,
+.window-app.alchemy-compendium .outcomes-grid.uncommon-grid,
+.window-app.alchemy-compendium .outcomes-grid.rare-grid,
+.window-app.alchemy-compendium .outcomes-grid.veryRare-grid {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.window-app.alchemy-compendium .outcomes-grid.legendary-grid {
+    grid-template-columns: 1fr;
+}
+
+/* Outcome Cells and Icons */
+.window-app.alchemy-compendium .outcome-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+}
+
+.window-app.alchemy-compendium .item-icon {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    border: 1px solid #4b4a44;
+    border-radius: 3px;
+    margin-bottom: 5px;
+}
+
+.window-app.alchemy-compendium .outcome-icon {
+    width: 36px;
+    height: 36px;
+    display: inline-block;
+    border: 1px solid #4b4a44;
+    border-radius: 3px;
+    cursor: default;
+    line-height: 36px;
+    text-align: center;
+    font-size: 24px;
+    color: #c9c7b8;
+}
+
+.window-app.alchemy-compendium .unknown-icon {
+    background: rgba(128, 128, 128, 0.2); /* Gray background */
+    content: "?";
+}
+
+.window-app.alchemy-compendium .known-icon {
+    background: rgba(255, 215, 0, 0.2); /* Gold background */
+    content: "📖"; /* Book emoji */
+}
+
+.window-app.alchemy-compendium .consumable-link {
+    cursor: pointer;
+    display: block;
+}
+
+.window-app.alchemy-compendium .consumable-link:hover {
+    background-color: rgba(0, 128, 255, 0.2); /* Light blue hover effect */
+}
+
+.window-app.alchemy-compendium .outcome-sum {
+    font-size: 12px;
+    color: #c9c7b8;
+    margin-top: 5px;
+}
+
+/* Buttons and Interactive Elements */
+.alchemy-compendium .clear-outcome {
+    margin-top: 5px;
+    background: rgba(255, 0, 0, 0.6);
+    border: none;
+    color: white;
+    padding: 2px 5px;
+    cursor: pointer;
+}
+
+.alchemy-compendium .clear-outcome:hover {
+    background: rgba(255, 0, 0, 0.8);
+}
+
+/* Edit Mode Styling */
+.alchemy-compendium.edit-mode .outcome-cell {
+    border: 1px dashed #ff0;
+    padding: 5px;
+}
+
+.alchemy-compendium.edit-mode .edit-mode-indicator {
+    font-size: 20px;
+    color: #ffd700;
+    text-shadow: 1px 1px 2px #000;
+    display: inline-block;
+}

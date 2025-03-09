@@ -2,33 +2,47 @@
     <h2>Alchemy Crafting</h2>
     <div class="cauldron-container">
         <div class="reagent-triangle">
-            {{#each selectedReagents as |reagent index|}}
-                <div class="reagent-slot" data-slot="{{index}}">
-                    {{#if reagent}}
-                        <img src="{{reagent.img}}" class="item-icon" />
-                    {{else}}
-                        +
-                    {{/if}}
+            <!-- Row 1: Top reagent slot (centered) -->
+            <div class="reagent-slot top-slot" data-slot="0">
+                {{#if selectedReagents.[0]}}
+                    <img src="{{selectedReagents.[0].img}}" class="item-icon" />
+                {{else}}
+                    +
+                {{/if}}
+            </div>
+            <!-- Row 2: Outcome selection (centered) -->
+            {{#if hasTiebreaker}}
+                <div class="tiebreaker-options">
+                    {{#each tiebreakerOutcomes}}
+                        <div class="outcome-icon {{this.category}}-icon {{#if this.selected}}selected{{/if}}" 
+                             data-category="{{this.category}}" 
+                             {{#if this.itemId}}data-item-id="{{this.itemId}}"{{/if}}
+                             {{#if this.itemImg}}
+                                 style="background-image: url('{{this.itemImg}}'); background-size: cover; background-position: center;"
+                             {{/if}}>
+                        </div>
+                    {{/each}}
                 </div>
-            {{/each}}
+            {{/if}}
+            <!-- Row 3: Bottom left and right reagent slots -->
+            <div class="reagent-slot bottom-left-slot" data-slot="1">
+                {{#if selectedReagents.[1]}}
+                    <img src="{{selectedReagents.[1].img}}" class="item-icon" />
+                {{else}}
+                    +
+                {{/if}}
+            </div>
+            <div class="reagent-slot bottom-right-slot" data-slot="2">
+                {{#if selectedReagents.[2]}}
+                    <img src="{{selectedReagents.[2].img}}" class="item-icon" />
+                {{else}}
+                    +
+                {{/if}}
+            </div>
         </div>
     </div>
     <div class="ip-display">
         <p>Influence Points: <span class="ip-values">{{ipSums.combat}} / {{ipSums.utility}} / {{ipSums.entropy}}</span></p>
-        {{#if hasTiebreaker}}
-            <p>Select Outcome:</p>
-            <div class="tiebreaker-options">
-                {{#each tiebreakerOutcomes}}
-                    <div class="outcome-icon {{this.category}}-icon {{#if this.selected}}selected{{/if}}" 
-                         data-category="{{this.category}}" 
-                         {{#if this.itemId}}data-item-id="{{this.itemId}}"{{/if}}
-                         {{#if this.itemImg}}
-                             style="background-image: url('{{this.itemImg}}'); background-size: cover; background-position: center;"
-                         {{/if}}>
-                    </div>
-                {{/each}}
-            </div>
-        {{/if}}
         <button class="craft-btn" {{#unless canCraft}}disabled{{/unless}}>{{#if outcomeKnown}}Craft!{{else}}Experiment!{{/if}}</button>
         <button class="clear-slots-btn">Clear Slots</button>
     </div>

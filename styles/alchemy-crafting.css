@@ -1,0 +1,222 @@
+/* Center alchemy-crafting within its container */
+.sheet-body .main-content .tab-body .tab.crafting .alchemy-crafting {
+    display: block !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    text-align: center !important;
+    width: fit-content !important;
+    max-width: 100%;
+}
+
+/* Center cauldron image */
+.alchemy-crafting img {
+    display: block;
+    margin: 0 auto;
+}
+
+/* Cauldron container styling */
+.cauldron-container {
+    position: relative;
+    width: 400px;
+    height: 400px;
+    background-size: contain;
+    opacity: 1.0;
+}
+
+/* Animation effects for cauldron */
+.cauldron-container.ready .reagent-triangle::after,
+.cauldron-container.crafting .reagent-triangle::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 80%;
+    height: 80%;
+    transform: translate(-50%, -50%);
+}
+
+.cauldron-container.ready .reagent-triangle::after {
+    background: radial-gradient(circle, rgba(0, 255, 0, 0.3), transparent);
+    animation: bubble 2s infinite;
+}
+
+.cauldron-container.crafting .reagent-triangle::after {
+    animation: flash 0.5s;
+}
+
+/* Reagent triangle layout */
+.reagent-triangle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Position individual reagent slots */
+.reagent-slot {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid rgba(255, 255, 256, 0.2);
+    background: rgba(0, 0, 0, 0.5);
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+    line-height: 50px;
+    cursor: pointer;
+    transition: background 0.2s ease-in-out;
+    pointer-events: all !important;
+    z-index: 1000 !important;
+}
+
+.reagent-slot:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.reagent-slot[data-slot="0"] {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.reagent-slot[data-slot="1"] {
+    position: absolute;
+    bottom: 10px;
+    left: 20px;
+}
+
+.reagent-slot[data-slot="2"] {
+    position: absolute;
+    bottom: 10px;
+    right: 20px;
+}
+
+/* IP display */
+.ip-display {
+    text-align: center;
+    margin: 10px 0;
+}
+
+.ip-values {
+    font-weight: bold;
+    color: #f0f0e0;
+}
+
+/* Tiebreaker options */
+.outcome-icon {
+    width: 180px;
+    height: 60px;
+    display: inline-block;
+    border: 1px solid #4b4a44;
+    border-radius: 3px;
+    cursor: pointer;
+    background-repeat: no-repeat; /* Ensure background image behaves correctly */
+}
+
+.outcome-icon.combat-icon {
+    background-color: rgba(255, 0, 0, 0.2); /* Fallback color if no image */
+    width: 60px;
+    height: 60px;
+}
+
+.outcome-icon.utility-icon {
+    background-color: rgba(0, 0, 255, 0.2); /* Fallback color if no image */
+    width: 60px;
+    height: 60px;
+}
+
+.outcome-icon.entropy-icon {
+    background-color: rgba(128, 0, 128, 0.2); /* Fallback color if no image */
+    width: 60px;
+    height: 60px;
+}
+
+.outcome-icon.selected {
+    border: 2px solid #ffd700; /* Glowing gold border only when selected */
+    box-shadow: 0 0 5px #ffd700, 0 0 10px #ffd700; /* Enhanced glow effect */
+}
+
+.tiebreaker-options {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+/* Craft and clear buttons */
+.craft-btn,
+.clear-slots-btn {
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 5px 10px;
+    margin: 5px;
+    cursor: pointer;
+    font-family: var(--font-primary, "Modesto Condensed", "Palatino Linotype", serif);
+    position: relative;
+    z-index: 1000;
+    pointer-events: auto;
+}
+
+.craft-btn:hover,
+.clear-slots-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.craft-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Crafting history */
+.crafting-history {
+    margin-top: 10px;
+    padding: 5px;
+    border-top: 1px solid #ccc;
+}
+
+.open-compendium-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px;
+}
+
+.open-compendium-btn span {
+    font-size: 18px;
+    color: #f0f0e0;
+    font-family: var(--font-primary, "Modesto Condensed", "Palatino Linotype", serif);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.open-compendium-btn i {
+    font-size: 36px;
+    color: #f0f0e0;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.open-compendium-btn:hover span,
+.open-compendium-btn:hover i {
+    color: #ffd700;
+}
+
+/* Animations */
+@keyframes bubble {
+    0% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+    50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 0.2; }
+}
+
+@keyframes flash {
+    0% { background: radial-gradient(circle, rgba(255, 255, 255, 0.5), transparent); }
+    100% { background: radial-gradient(circle, rgba(0, 255, 0, 0.3), transparent); }
+}

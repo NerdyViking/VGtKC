@@ -1,65 +1,129 @@
 /**
- * Main entry point for Vikarov's Guide to Kaeliduran Crafting.
- * Registers hooks and ties the module together.
+ * General module initialization and shared hooks for Vikarov's Guide to Kaeliduran Crafting.
  */
-import { getReagents } from "./utils.js";
-import { ReagentSelectionDialog } from "./reagentSelectionDialog.js";
-import { CraftingCompendium } from "./craftingCompendium.js";
+
+import { registerReagentSubtype } from "./reagents.js";
 import { renderCraftingTab } from "./craftingUI.js";
-import { calculateIPSums, determineOutcome, handleCrafting } from "./reagents.js";
+import { calculateIPSums, determineOutcome } from "./reagents.js";
 
-const $ = foundry.utils.jQuery || window.jQuery;
-
-/* === Tab Registration === */
-Hooks.on("dnd5e.getActorSheetData", (data, sheet) => {
-    if (sheet.actor.type !== "character") return;
-    data.tabs = data.tabs || [];
-    data.tabs.push({
-        tab: "crafting",
-        label: "Crafting",
-        icon: '<i class="fas fa-book-open"></i>',
-        active: sheet._activeTab === "crafting"
+// Helper function to remove the Magical checkbox
+function removeMagicalCheckbox(html) {
+    const magicalCheckbox = html.find('.form-fields label.checkbox').filter(function () {
+        return $(this).text().trim().includes("Magical");
     });
-});
+    if (magicalCheckbox.length) {
+        magicalCheckbox.remove();
+    }
+}
 
-/* === Module Initialization === */
-Hooks.once("init", () => {
-    if (!CONFIG.Item) CONFIG.Item = {};
-    if (!CONFIG.Item.type) CONFIG.Item.type = [];
-    if (!CONFIG.Item.type.includes("reagent")) CONFIG.Item.type.push("reagent");
+// Hook to patch the item sheet form for reagent items
+Hooks.on("renderItemSheet", (app, html, data) => {
+    if (app.document.type === "loot") {
+        // Patch the subtype dropdown to include 'reagent'
+        const $typeSelect = html.find('[name="system.type.value"]');
+        if ($typeSelect.length && game.user.isGM) {
+            let options = $typeSelect.find("option");
+            if (!options.toArray().some(opt => opt.value === "reagent")) {
+                $typeSelect.append('<option value="reagent">Reagent</option>');
+            }
 
-    // Add V2 preRollToolCheck hook to debug the roll configuration
-    Hooks.on("dnd5e.preToolCheckRollConfiguration", (actor, config) => {
-        if (config?.data?.tool === "alchemist") {
-            config.ability = config.ability || "int";
+            // Add change event listener to update subtype and flags
+            $typeSelect.off("change").on("change", async function () {
+                const selectedValue = this.value;
+                const isReagent = selectedValue === "reagent";
+                await app.document.update({ "system.type.value": selectedValue });
+                await app.document.setFlag("vikarovs-guide-to-kaeliduran-crafting", "isReagent", isReagent, { render: false });
+                if (isReagent) {
+                    removeMagicalCheckbox(html);
+                }
+                app.render(false); // Re-render to apply changes
+            });
+
+            // Set initial value based on flag or system.type.value
+            const isReagent = app.document.getFlag("vikarovs-guide-to-kaeliduran-crafting", "isReagent") || data.item.system?.type?.value === "reagent";
+            if (isReagent) {
+                $typeSelect.val("reagent");
+                removeMagicalCheckbox(html);
+            }
         }
-        return true; // Allow the roll to proceed
-    });
+
+        // Modify form for 'reagent' subtype
+        if (data.item.system?.type?.value === "reagent" || app.document.getFlag("vikarovs-guide-to-kaeliduran-crafting", "isReagent")) {
+            // Target the loot properties group
+            const $lootPropertiesGroup = html.find(".form-group.stacked.checkbox-grid");
+            if ($lootPropertiesGroup.length) {
+                const $lootPropertiesLabel = $lootPropertiesGroup.find("label").first();
+                const $lootPropertiesFields = $lootPropertiesGroup.find(".form-fields");
+                if ($lootPropertiesLabel.length && $lootPropertiesFields.length) {
+                    $lootPropertiesLabel.text("Reagent Properties");
+
+                    // Inject essence dropdown
+                    const essenceTypes = ["None", "Primal", "Fey", "Eldritch"];
+                    const currentEssence = app.document.getFlag("vikarovs-guide-to-kaeliduran-crafting", "essence") || "None";
+                    let essenceOptions = essenceTypes.map(type => 
+                        `<option value="${type}" ${type === currentEssence ? "selected" : ""}>${type}</option>`
+                    ).join("");
+                    const essenceHtml = `
+                        <label class="checkbox reagent-properties">
+                            Essence:
+                            <select name="flags.vikarovs-guide-to-kaeliduran-crafting.essence" class="essence-select">
+                                ${essenceOptions}
+                            </select>
+                        </label>
+                    `;
+
+                    // Inject IP value inputs
+                    const ipValues = app.document.getFlag("vikarovs-guide-to-kaeliduran-crafting", "ipValues") || { combat: 0, utility: 0, entropy: 0 };
+                    const ipHtml = `
+                        <label class="checkbox reagent-properties">
+                            Influence Points:
+                            <input type="number" name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.combat" value="${ipValues.combat}" class="ip-input" min="0" />
+                            <input type="number" name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.utility" value="${ipValues.utility}" class="ip-input" min="0" />
+                            <input type="number" name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.entropy" value="${ipValues.entropy}" class="ip-input" min="0" />
+                        </label>
+                    `;
+
+                    // Append custom fields
+                    $lootPropertiesFields.find(".reagent-properties").remove(); // Clear existing custom fields
+                    $lootPropertiesFields.append(essenceHtml, ipHtml);
+                }
+            } else {
+                // Fallback to details tab
+                html.find('.tab[data-tab="details"]').prepend(`
+                    <div class="form-group stacked.checkbox-grid">
+                        <label>Reagent Properties</label>
+                        <div class="form-fields">
+                            ${essenceHtml}
+                            ${ipHtml}
+                        </div>
+                    </div>
+                `);
+            }
+        }
+    }
 });
 
-/* === Actor Sheet Rendering === */
-Hooks.on("renderActorSheet", async (app, html, data) => {
-    const actor = app.actor;
-    if (actor.type !== "character" || !(app instanceof ActorSheet) || app._isRendering) return;
-    app._isRendering = true;
-
-    const liveHtml = $(app.element);
-    const sheetBody = liveHtml.find('.sheet-body');
-    const tabs = liveHtml.find('.tabs');
-    if (!sheetBody.length || !tabs.length) {
-        app._isRendering = false;
+// Hook to append essence and IP values to item names in the actor inventory
+Hooks.on("renderActorSheet", (app, html, data) => {
+    // Skip render if suppressed (e.g., during crafting)
+    if (app._suppressRender) {
+        console.log("hooks.js | renderActorSheet skipped: Render suppressed during crafting");
         return;
     }
 
-    // Check the active tab
-    const activeTab = app._tabs[0]?.active || "description";
+    let actor = app.actor || data.actor;
+    if (!actor || !actor.items) return;
 
-    if (!tabs.find('[data-tab="crafting"]').length) {
+    // Add crafting tab if not present
+    const tabs = html.find('.tabs');
+    if (tabs.length && !tabs.find('[data-tab="crafting"]').length) {
         tabs.find('.item').last().after('<a class="item" data-tab="crafting"><i class="fas fa-book-open"></i></a>');
     }
 
+    // Initialize crafting state
     app.craftingState = app.craftingState || { selectedReagents: [null, null, null], selectedOutcome: null };
 
+    // Define reagent slot click handler
     const reagentSlotClickHandler = async (event, updateCraftingUI) => {
         if (event && typeof event.preventDefault === "function") {
             event.preventDefault();
@@ -81,291 +145,92 @@ Hooks.on("renderActorSheet", async (app, html, data) => {
         }, app.craftingState.selectedReagents).render(true);
     };
 
-    await renderCraftingTab(app, liveHtml, data, calculateIPSums, determineOutcome, reagentSlotClickHandler, async () => {
-        await handleCrafting(app, app.craftingState, calculateIPSums, determineOutcome, renderCraftingTab, liveHtml);
+    // Render crafting tab unconditionally
+    renderCraftingTab(app, html, data, calculateIPSums, determineOutcome, reagentSlotClickHandler, async () => {
+        await handleCrafting(app, app.craftingState, calculateIPSums, determineOutcome, renderCraftingTab, html);
     }, app.updateCraftingUI);
 
-    // Verify the crafting tab content is in the DOM
-    const targetTabBody = liveHtml.find('.sheet-body .main-content .tab-body');
-    const craftingTabContent = targetTabBody.find('.tab.crafting');
-    if (craftingTabContent.length) {
-    } else {
+    // Append essence and IP values to inventory items
+    let itemElements = html.find('.items-list .item');
+    if (itemElements.length === 0) {
+        itemElements = html.find('.inventory-list .item');
+        if (itemElements.length === 0) {
+            itemElements = html.find('.item-list .item');
+            if (itemElements.length === 0) {
+                itemElements = html.find('[data-item-id]');
+                if (itemElements.length === 0) {
+                    itemElements = html.find('.item-name');
+                    if (itemElements.length === 0) return;
+                }
+            }
+        }
     }
 
-    // Modify item names to show reagent IPs with dynamic essence prefix
-    const itemElements = liveHtml.find('.item-list .item .item-name, .item-pile-inventory-item .item-name');
     itemElements.each((index, element) => {
-        const itemId = $(element).closest('.item, .item-pile-inventory-item').data('item-id');
+        const $element = $(element);
+        const itemId = $element.data('item-id') || $element.closest('[data-item-id]').data('item-id');
+        let item;
+
         if (itemId) {
-            const item = actor.items.get(itemId);
-            if (item) {
-                const isReagent = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "isReagent") || false;
+            item = actor.items.get(itemId);
+        } else {
+            let displayedName = $element.find('.item-name h4').text().trim() || $element.find('.item-name').text().trim() || $element.text().trim();
+            item = actor.items.find(i => i.name.toLowerCase() === displayedName.toLowerCase());
+        }
+
+        if (item) {
+            const isReagent = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "isReagent") || false;
+            if (isReagent) {
                 const ipValues = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "ipValues") || { combat: 0, utility: 0, entropy: 0 };
                 const combatIP = Number(ipValues.combat) || 0;
                 const utilityIP = Number(ipValues.utility) || 0;
                 const entropyIP = Number(ipValues.entropy) || 0;
-                // Check if item is a reagent before appending IPs
-                if (isReagent) {
-                    // Determine the prefix based on essence
-                    const essence = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "essence") || "None";
-                    let prefix = "N"; // Default to N for None or undefined
-                    switch (essence.toLowerCase()) {
-                        case "fey":
-                            prefix = "F";
-                            break;
-                        case "eldritch":
-                            prefix = "E";
-                            break;
-                        case "primal":
-                            prefix = "P";
-                            break;
-                        case "none":
-                        default:
-                            prefix = "N";
-                            break;
-                    }
-                    const ipString = `(${prefix}: ${combatIP} ${utilityIP} ${entropyIP})`;
-                    // Preserve original content and append IP string
-                    const $element = $(element);
-                    if (!$element.find('.reagent-ips-span').length) {
-                        $element.append(`<span class="reagent-ips-span">${ipString}</span>`);
+                const essence = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "essence") || "None";
+                let prefix = "N"; // Default to N for None
+                switch (essence.toLowerCase()) {
+                    case "primal":
+                        prefix = "P";
+                        break;
+                    case "fey":
+                        prefix = "F";
+                        break;
+                    case "eldritch":
+                        prefix = "E";
+                        break;
+                    case "none":
+                    default:
+                        prefix = "N";
+                        break;
+                }
+                const ipString = `(${prefix}: ${combatIP} ${utilityIP} ${entropyIP})`;
+                const $nameElement = $element.find('.item-name h4').length ? $element.find('.item-name h4') : $element.find('.item-name');
+                if ($nameElement.length) {
+                    if (!$nameElement.find('.reagent-ips-span').length) {
+                        $nameElement.append(`<span class="reagent-ips-span">${ipString}</span>`);
                     } else {
-                        $element.find('.reagent-ips-span').text(ipString);
+                        $nameElement.find('.reagent-ips-span').text(ipString);
                     }
                 }
             }
         }
     });
-
-    // Set up a MutationObserver to watch for tab changes
-    const tabsElement = tabs[0];
-    if (!app._tabObserver) {
-        app._tabObserver = new MutationObserver(() => {
-            const currentActiveTab = app._tabs[0]?.active || "description";
-        });
-
-        app._tabObserver.observe(tabsElement, {
-            attributes: true,
-            attributeFilter: ["class"],
-            subtree: true
-        });
-    }
-
-    // Clear crafting state when the sheet closes
-    if (!app._closeHandlerSet) {
-        app.element.on('close', () => {
-            app.craftingState = null;
-            if (app._tabObserver) {
-                app._tabObserver.disconnect();
-                app._tabObserver = null;
-            }
-        });
-        app._closeHandlerSet = true;
-    }
-
-    app._isRendering = false;
 });
 
-/* === Item Sheet Modification === */
-Hooks.on("renderItemSheet", async (app, html, data) => {
-    const item = app.object;
-    if (item.type !== "loot") return;
-
-    app._renderCount = (app._renderCount || 0) + 1;
-
-    const lootTypeSelect = html.find('select[name="system.type.value"]');
-    if (!lootTypeSelect.length) return;
-
-    if (!lootTypeSelect.find('option[value="reagent"]').length) {
-        lootTypeSelect.append('<option value="reagent">Reagent</option>');
-    }
-
-    lootTypeSelect.on("change", async function () {
-        const selectedValue = this.value;
-        const isReagent = selectedValue === "reagent";
-        await item.update({ "system.type.value": selectedValue });
-        await item.setFlag("vikarovs-guide-to-kaeliduran-crafting", "isReagent", isReagent, { render: false });
-        if (isReagent) removeMagicalCheckbox(html);
-        app.render(false);
-    });
-
-    const isReagent = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "isReagent") || false;
-    if (isReagent) lootTypeSelect.val("reagent");
-
-    const lootPropertiesGroup = html.find(".form-group.stacked.checkbox-grid");
-    if (!lootPropertiesGroup.length) return;
-
-    const lootPropertiesLabel = lootPropertiesGroup.find("label").first();
-    const lootPropertiesFields = lootPropertiesGroup.find(".form-fields");
-    if (!lootPropertiesLabel.length || !lootPropertiesFields.length) return;
-
-    if (isReagent) {
-        lootPropertiesLabel.text("Reagent Properties");
-        removeMagicalCheckbox(html);
-    } else {
-        lootPropertiesLabel.text("Loot Properties");
-    }
-
-    const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            if (isReagent && mutations.some(m => m.addedNodes.length || m.removedNodes.length)) {
-                removeMagicalCheckbox(html);
-            }
-        });
-    });
-    observer.observe(app.element[0], { childList: true, subtree: true });
-
-    app.element.on('close', () => {
-        observer.disconnect();
-        app._renderCount = 0;
-        const actorSheet = Object.values(ui.windows).find(w => w.actor === item.actor && w instanceof ActorSheet);
-        if (actorSheet) {
-            actorSheet.element.removeClass('editing-item-sheet');
-            if (actorSheet.render && !actorSheet._isRendering) actorSheet.render(true);
-        }
-    });
-
-    if (isReagent) {
-        lootPropertiesFields.find(".reagent-properties").remove();
-        const essence = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "essence") || "None";
-        const ipValues = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "ipValues") || { combat: 0, utility: 0, entropy: 0 };
-        const combatIP = Number(ipValues.combat) || 0;
-        const utilityIP = Number(ipValues.utility) || 0;
-        const entropyIP = Number(ipValues.entropy) || 0;
-
-        const customHTML = `
-            <label class="checkbox reagent-properties">
-                Essence:
-                <select name="flags.vikarovs-guide-to-kaeliduran-crafting.essence" class="essence-select">
-                    <option value="None" ${essence === "None" ? "selected" : ""}>None</option>
-                    <option value="Primal" ${essence === "Primal" ? "selected" : ""}>Primal</option>
-                    <option value="Fey" ${essence === "Fey" ? "selected" : ""}>Fey</option>
-                    <option value="Eldritch" ${essence === "Eldritch" ? "selected" : ""}>Eldritch</option>
-                </select>
-            </label>
-            <label class="checkbox reagent-properties">
-                Combat: <input type="number" name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.combat" value="${combatIP}" class="ip-input" />
-                Utility: <input type="number" name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.utility" value="${utilityIP}" class="ip-input" />
-                Entropy: <input type="number" name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.entropy" value="${entropyIP}" class="ip-input" />
-            </label>
-        `;
-        lootPropertiesFields.append(customHTML);
-
-        const actorSheet = Object.values(ui.windows).find(w => w.actor === item.actor && w instanceof ActorSheet);
-        const updateEssence = async (newEssence) => {
-            await item.setFlag("vikarovs-guide-to-kaeliduran-crafting", "essence", newEssence, { render: false });
-            html.find('[name="flags.vikarovs-guide-to-kaeliduran-crafting.essence"]').val(newEssence);
-            if (actorSheet && actorSheet.craftingState && actorSheet.craftingState.selectedReagents.some(r => r && r.id === item.id) && actorSheet.updateCraftingUI && !actorSheet._isUpdatingCraftingUI) {
-                actorSheet._isUpdatingCraftingUI = true;
-                try {
-                    await actorSheet.updateCraftingUI();
-                } finally {
-                    actorSheet._isUpdatingCraftingUI = false;
-                }
-            }
-        };
-
-        const updateIPValues = async (combat, utility, entropy) => {
-            await item.setFlag("vikarovs-guide-to-kaeliduran-crafting", "ipValues", { combat, utility, entropy }, { render: false });
-            html.find('[name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.combat"]').val(combat);
-            html.find('[name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.utility"]').val(utility);
-            html.find('[name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.entropy"]').val(entropy);
-            if (actorSheet && actorSheet.craftingState && actorSheet.craftingState.selectedReagents.some(r => r && r.id === item.id) && actorSheet.updateCraftingUI && !actorSheet._isUpdatingCraftingUI) {
-                actorSheet._isUpdatingCraftingUI = true;
-                try {
-                    await actorSheet.updateCraftingUI();
-                } finally {
-                    actorSheet._isUpdatingCraftingUI = false;
-                }
-            }
-        };
-
-        html.find('[name="flags.vikarovs-guide-to-kaeliduran-crafting.essence"]').off("change").on("change", function () {
-            updateEssence(this.value);
-        });
-
-        html.find('[name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.combat"], [name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.utility"], [name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.entropy"]').off("change").on("change", async function () {
-            const combat = Number(html.find('[name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.combat"]').val()) || 0;
-            const utility = Number(html.find('[name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.utility"]').val()) || 0;
-            const entropy = Number(html.find('[name="flags.vikarovs-guide-to-kaeliduran-crafting.ipValues.entropy"]').val()) || 0;
-            updateIPValues(combat, utility, entropy);
-        });
-    }
-});
-
-/* === Item Update Hook for Dynamic Updates === */
-Hooks.on("updateItem", (item, update, options, userId) => {
-    if (update?.flags?.["vikarovs-guide-to-kaeliduran-crafting"]?.ipValues || update?.flags?.["vikarovs-guide-to-kaeliduran-crafting"]?.essence) {
-        const actor = item.actor;
-        if (actor) {
-            const actorSheet = Object.values(ui.windows).find(w => w.actor === actor && w instanceof ActorSheet);
-            if (actorSheet && !actorSheet._isRendering) {
-                actorSheet.render(false);
-            }
-        }
-    }
-});
-
-/* === Item Piles Merchant Sheet Hook === */
-Hooks.once('init', () => {
-    // Inject CSS for Item Piles merchant sheet
-    const style = document.createElement('style');
-    style.textContent = `
-        .item-piles-merchant-sheet .reagent-ips-span {
-            color: #000000; /* Black text for Item Piles merchant sheet */
-        }
-    `;
-    document.head.appendChild(style);
-});
-
+// Hook to append essence and IP values to item names in the Item Piles merchant sheet
 Hooks.on("renderMerchantApp", (app, html, data) => {
-    // Try to find the actor through multiple methods
-    let actor = null;
-    let items = null;
-
-    // Method 1: Check data.merchant
-    if (data.merchant) {
-        actor = data.merchant;
-        items = actor.items;
-    }
-
-    // Method 2: Check app.document (common in Foundry apps)
-    if (!actor && app.document) {
-        actor = app.document;
-        items = actor.items;
-    }
-
-    // Method 3: Check app.actor (fallback)
-    if (!actor && app.actor) {
-        actor = app.actor;
-        items = actor.items;
-    }
-
-    // Method 4: Check for an actor ID in app.options.id and fetch the actor
-    if (!actor && app.options && app.options.id) {
-        const actorIdMatch = app.options.id.match(/item-pile-merchant-([^-]+)/);
+    let actor = data.merchant || app.document || app.actor;
+    if (!actor) {
+        const actorIdMatch = app.options?.id?.match(/item-pile-merchant-([^-]+)/);
         if (actorIdMatch && actorIdMatch[1]) {
-            const actorId = actorIdMatch[1];
-            actor = game.actors.get(actorId);
-            if (actor) {
-                items = actor.items;
-            }
+            actor = game.actors.get(actorIdMatch[1]);
         }
     }
+    if (!actor || !actor.items) return;
 
-    // Final check: If no actor or items found, exit
-    if (!actor || !items) {
-        return;
-    }
-
-    // Access the DOM directly using the window's ID
     const windowId = app.options.id;
     const windowElement = document.getElementById(windowId);
-    if (!windowElement) {
-        return;
-    }
+    if (!windowElement) return;
 
-    // Find item rows in the DOM
     let itemElements = $(windowElement).find('.item-piles-item-row .item-piles-clickable');
     if (itemElements.length === 0) {
         itemElements = $(windowElement).find('.item-row .item-name');
@@ -377,9 +242,7 @@ Hooks.on("renderMerchantApp", (app, html, data) => {
                     itemElements = $(windowElement).find('.item-piles-item');
                     if (itemElements.length === 0) {
                         itemElements = $(windowElement).find('.item');
-                        if (itemElements.length === 0) {
-                            return;
-                        }
+                        if (itemElements.length === 0) return;
                     }
                 }
             }
@@ -389,9 +252,7 @@ Hooks.on("renderMerchantApp", (app, html, data) => {
     itemElements.each((index, element) => {
         const $element = $(element);
         let displayedName = $element.find('.item-name').text().trim() || $element.text().trim();
-
-        // Find the item in items that matches the displayed name (case-insensitive)
-        const item = items.find(i => i.name.toLowerCase() === displayedName.toLowerCase());
+        const item = actor.items.find(i => i.name.toLowerCase() === displayedName.toLowerCase());
         if (item) {
             const isReagent = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "isReagent") || false;
             const ipValues = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "ipValues") || { combat: 0, utility: 0, entropy: 0 };
@@ -399,18 +260,17 @@ Hooks.on("renderMerchantApp", (app, html, data) => {
             const utilityIP = Number(ipValues.utility) || 0;
             const entropyIP = Number(ipValues.entropy) || 0;
             if (isReagent) {
-                // Determine the prefix based on essence
                 const essence = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "essence") || "None";
-                let prefix = "N"; // Default to N for None or undefined
+                let prefix = "N"; // Default to N for None
                 switch (essence.toLowerCase()) {
+                    case "primal":
+                        prefix = "P";
+                        break;
                     case "fey":
                         prefix = "F";
                         break;
                     case "eldritch":
                         prefix = "E";
-                        break;
-                    case "primal":
-                        prefix = "P";
                         break;
                     case "none":
                     default:
@@ -428,120 +288,137 @@ Hooks.on("renderMerchantApp", (app, html, data) => {
     });
 });
 
-/* === Actor Sheet Hook === */
-Hooks.on("renderActorSheet", (app, html, data) => {
-    // Try to find the actor through multiple methods
-    let actor = null;
-    let items = null;
-
-    // Method 1: Check app.actor
-    if (app.actor) {
-        actor = app.actor;
-        items = actor.items;
-    }
-
-    // Method 2: Check data.actor (fallback)
-    if (!actor && data.actor) {
-        actor = data.actor;
-        items = actor.items;
-    }
-
-    // Final check: If no actor or items found, exit
-    if (!actor || !items) {
-        return;
-    }
-
-    // Find item rows in the actor sheet
-    let itemElements = html.find('.item-list .item');
-    if (itemElements.length === 0) {
-        itemElements = html.find('.inventory-list .item');
-        if (itemElements.length === 0) {
-            itemElements = html.find('[data-item-id]');
-            if (itemElements.length === 0) {
-                return;
-            }
-        }
-    }
-
-    itemElements.each((index, element) => {
-        const $element = $(element);
-        let displayedName = $element.find('.item-name').text().trim() || $element.text().trim();
-
-        // Find the item in items that matches the displayed name (case-insensitive)
-        const item = items.find(i => i.name.toLowerCase() === displayedName.toLowerCase());
-        if (item) {
-            const isReagent = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "isReagent") || false;
-            const ipValues = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "ipValues") || { combat: 0, utility: 0, entropy: 0 };
-            const combatIP = Number(ipValues.combat) || 0;
-            const utilityIP = Number(ipValues.utility) || 0;
-            const entropyIP = Number(ipValues.entropy) || 0;
-            if (isReagent) {
-                // Determine the prefix based on essence
-                const essence = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "essence") || "None";
-                let prefix = "P"; // Default to P for Primal or undefined
-                switch (essence.toLowerCase()) {
-                    case "fey":
-                        prefix = "F";
-                        break;
-                    case "eldritch":
-                        prefix = "E";
-                        break;
-                    case "none":
-                    case "primal": // Default to P for Primal or None
-                    default:
-                        prefix = "P";
-                        break;
-                }
-                const ipString = `(${prefix}: ${combatIP} ${utilityIP} ${entropyIP})`;
-                if (!$element.find('.reagent-ips-span').length) {
-                    $element.append(`<span class="reagent-ips-span">${ipString}</span>`);
-                } else {
-                    $element.find('.reagent-ips-span').text(ipString);
-                }
-            }
-        }
+Hooks.on("dnd5e.getActorSheetData", (data, sheet) => {
+    if (sheet.actor.type !== "character") return;
+    data.tabs = data.tabs || [];
+    data.tabs.push({
+        tab: "crafting",
+        label: "Crafting",
+        icon: '<i class="fas fa-book-open"></i>',
+        active: sheet._activeTab === "crafting"
     });
 });
 
-/* === Helper Functions === */
-function ensureElement(parent, selector, html) {
-    let element = parent.find(selector);
-    if (!element.length) {
-        element = $(html);
-        parent.append(element);
-    }
-    return element;
-}
-
-function removeMagicalCheckbox(html) {
-    const magicalCheckbox = html.find('.form-fields label.checkbox').filter(function () {
-        return $(this).text().trim().includes("Magical");
+Hooks.once("setup", () => {
+    registerReagentSubtype();
+    Hooks.on("dnd5e.preToolCheckRollConfiguration", (actor, config) => {
+        if (config?.data?.tool === "alchemist") {
+            config.ability = config.ability || "int";
+        }
+        return true;
     });
-    if (magicalCheckbox.length) magicalCheckbox.remove();
-}
-
-Hooks.once('init', () => {
     const style = document.createElement('style');
     style.textContent = `
-        .item-piles-merchant-sheet .reagent-ips-span {
-            color: #000000; /* Black text for Item Piles merchant sheet */
+        .item-piles-merchant-sheet .reagent-ips-span { color: #000000; }
+        .reagent-ips-span {
+            font-size: 0.9em;
+            color: #c9c7b8;
+            margin-left: 5px;
+            font-weight: normal;
+            white-space: nowrap;
         }
-        .outcome-wrapper {
+        .outcome-wrapper { display: flex; align-items: center; gap: 8px; }
+        .outcome-text { color: #ffffff; font-weight: bold; }
+        .outcome-item-icon { cursor: pointer; }
+        .item-icon {
+            width: 100%; /* Fill the slot */
+            height: 100%; /* Fill the slot */
+            object-fit: contain; /* Maintain aspect ratio */
+            cursor: pointer;
+            border: 1px solid #4b4a44;
+            border-radius: 3px;
+        }
+        .outcome-cell {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 5px;
+            padding: 2px;
         }
-        .outcome-text {
-            color: #ffffff; /* White text for dark theme */
-            font-weight: bold;
-        }
-        .outcome-item-icon {
-            cursor: pointer;
-        }
-        .outcome-item-icon img {
+        .outcome-icon {
             width: 24px;
             height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .unknown-icon {
+            background-color: #333;
+            color: #ccc;
+        }
+        .known-icon {
+            background-color: #555;
+            color: #fff;
+        }
+        /* Alchemy Crafting Styles */
+        .alchemy-crafting {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .reagent-triangle {
+            display: grid;
+            grid-template-rows: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr;
+            position: relative;
+            width: 400px; /* 3 slots wide (80px each) */
+            height: 400px; /* 3 slots high (80px each) */
+            margin: 0 auto;
+        }
+        .reagent-slot {
+            width: 80px;
+            height: 80px;
+            background: #333;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #fff;
+        }
+        .top-slot {
+            grid-row: 1;
+            grid-column: 1;
+        }
+        .tiebreaker-options {
+            grid-row: 2;
+            grid-column: 2;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 5px;
+            
+        }
+        .tiebreaker-options p {
+            margin: 0;
+            font-size: 0.9em;
+            color: #f0f0e0;
+        }
+        .bottom-left-slot {
+            grid-row: 3;
+            grid-column: 1;
+        }
+        .bottom-right-slot {
+            grid-row: 3;
+            grid-column: 3;
+        }
+        .ip-display {
+            margin: 10px 0;
         }
     `;
     document.head.appendChild(style);
+});
+
+Hooks.on("updateItem", (item, update, options, userId) => {
+    if (update?.flags?.["vikarovs-guide-to-kaeliduran-crafting"]?.ipValues || update?.flags?.["vikarovs-guide-to-kaeliduran-crafting"]?.essence) {
+        const actor = item.actor;
+        if (actor) {
+            const actorSheet = Object.values(ui.windows).find(w => w.actor === actor && w instanceof ActorSheet);
+            if (actorSheet && !actorSheet._isRendering && !actorSheet._suppressRender) {
+                console.log("hooks.js | Rendering actor sheet due to flag update");
+                actorSheet.render(false);
+            } else {
+                console.log("hooks.js | Skipped rendering actor sheet: suppressed or already rendering");
+            }
+        }
+    }
 });
