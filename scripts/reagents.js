@@ -19,6 +19,12 @@ export function determineOutcome(actor, craftingState) {
     /* === Outcome Determination === */
     const ipSums = calculateIPSums(craftingState);
     const maxSum = Math.max(ipSums.combat, ipSums.utility, ipSums.entropy);
+
+    // If all IP sums are zero, return no outcome and no tiebreaker
+    if (maxSum === 0) {
+        return { hasTiebreaker: false, outcomeKnown: false, outcomeCategory: null, outcomeTooltip: "No reagents selected" };
+    }
+
     const categories = [];
     if (ipSums.combat === maxSum) categories.push({ category: "combat", sum: maxSum });
     if (ipSums.utility === maxSum) categories.push({ category: "utility", sum: maxSum });
@@ -36,15 +42,30 @@ export function determineOutcome(actor, craftingState) {
     };
 
     if (categories.length > 1) {
+        const outcomes = game.settings.get('vikarovs-guide-to-kaeliduran-crafting', 'consumableOutcomes');
         const tiebreakerOutcomes = categories.map(cat => {
             const categoryKey = cat.category.charAt(0).toUpperCase() + cat.category.slice(1);
-            const isKnown = knownOutcomes[categoryKey].includes(cat.sum);
+            const isKnown = knownOutcomes[categoryKey].some(entry => Number(entry.sum) === cat.sum);
+            const itemId = outcomes[categoryKey] && outcomes[categoryKey][cat.sum] ? outcomes[categoryKey][cat.sum] : null;
+            let itemImg = null;
+            if (itemId) {
+                const item = game.items.get(itemId) || actor.items.get(itemId); // Try world or actor items
+                if (item) {
+                    itemImg = item.img; // Use the item's image if found
+                }
+            }
+            let tooltip = isKnown ? `Known ${cat.category} consumable (Sum: ${cat.sum})` : "Unknown Outcome";
+            if (itemId) {
+                tooltip += " - Click to view item";
+            }
             return {
                 category: cat.category,
                 sum: cat.sum,
                 known: isKnown,
-                tooltip: isKnown ? `Known ${cat.category} consumable (Sum: ${cat.sum})` : "Unknown Outcome",
-                selected: craftingState.selectedOutcome === cat.category
+                tooltip: tooltip,
+                selected: craftingState.selectedOutcome === cat.category,
+                itemId: itemId,
+                itemImg: itemImg // Add item image URL
             };
         });
         return { hasTiebreaker: true, tiebreakerOutcomes };
@@ -54,7 +75,7 @@ export function determineOutcome(actor, craftingState) {
         const category = categories[0].category;
         const sum = categories[0].sum;
         const categoryKey = category.charAt(0).toUpperCase() + category.slice(1);
-        const isKnown = knownOutcomes[categoryKey].includes(sum);
+        const isKnown = knownOutcomes[categoryKey].some(entry => Number(entry.sum) === sum);
         return {
             hasTiebreaker: false,
             outcomeKnown: isKnown,
@@ -284,7 +305,7 @@ export async function handleCrafting(app, craftingState, calculateIPSums, determ
         ui.notifications.info(`You crafted ${quantity} ${consumableData.name}(s)!`);
 
         // Update known outcomes only if not already known
-        if (!knownOutcomes[outcomeCategoryKey].some(entry => (typeof entry === "number" && entry === finalSum) || (entry.sum === finalSum))) {
+        if (!knownOutcomes[outcomeCategoryKey].some(entry => Number(entry.sum) === finalSum)) {
             const newEntry = { sum: finalSum, itemId: createdItems[0].id };
             knownOutcomes[outcomeCategoryKey] = [...knownOutcomes[outcomeCategoryKey], newEntry];
             await actor.setFlag("vikarovs-guide-to-kaeliduran-crafting", "knownCraftingOutcomes", knownOutcomes);
@@ -352,7 +373,10 @@ export async function handleCrafting(app, craftingState, calculateIPSums, determ
         });
 
         await renderCraftingTab(app, html, { actor: app.actor }, calculateIPSums, determineOutcome, reagentSlotClickHandler, handleCrafting);
-        console.log("Debug: Crafting tab re-rendered.");
+        if (app.updateCraftingUI) {
+            await app.updateCraftingUI();
+        }
+        console.log("Debug: Crafting tab re-rendered and updated.");
     } catch (error) {
         ui.notifications.error("Failed to reset crafting state and re-render tab.");
         console.error("Debug: Crafting state reset error:", error);

@@ -113,9 +113,87 @@ function bindEventHandlers(craftingTabContent, craftingState, reagentSlotClickHa
     const $ = foundry.utils.jQuery || window.jQuery;
     craftingTabContent.find('.reagent-slot').off("click").on("click", (event) => reagentSlotClickHandler(event, updateCraftingUI));
     craftingTabContent.find('.tiebreaker-options .outcome-icon').off("click").on("click", (event) => {
-        craftingState.selectedOutcome = event.currentTarget.dataset.category;
-        updateCraftingUI();
+        const $target = $(event.currentTarget);
+        const category = $target.data('category');
+        const itemId = $target.data('itemId');
+        
+        // If the icon is already selected, open the item sheet
+        if ($target.hasClass('selected') && itemId) {
+            const item = game.items.get(itemId) || craftingState.actor.items.get(itemId);
+            if (item) {
+                item.sheet.render(true);
+            } else {
+                ui.notifications.error("Item not found.");
+            }
+        } else {
+            // Otherwise, select the outcome
+            craftingState.selectedOutcome = category;
+            updateCraftingUI();
+        }
     });
+
+    // Add hover event listener for custom tooltip (item name and description only)
+    craftingTabContent.find('.tiebreaker-options .outcome-icon').off("mouseenter mouseleave").on("mouseenter", async (event) => {
+        const $target = $(event.currentTarget);
+        const itemId = $target.data('itemId');
+        let tooltipContent = '';
+
+        console.log("Hovering over icon with itemId:", itemId); // Debug log
+
+        if (itemId) {
+            const item = game.items.get(itemId) || craftingState.actor.items.get(itemId);
+            if (item) {
+                console.log("Item found:", item.name, "Description:", item.system?.description?.value); // Debug log
+                const name = item.name || "Unknown Item";
+                // Strip HTML tags from the description to avoid rendering issues
+                const description = item.system?.description?.value ? item.system.description.value.replace(/<[^>]+>/g, ' ').trim() : "";
+                tooltipContent = `
+                    <h4>${name}</h4>
+                    ${description ? `<div>${description}</div>` : ""}
+                `;
+                console.log("Tooltip content:", tooltipContent); // Debug log
+            } else {
+                console.log("Item not found for itemId:", itemId); // Debug log
+                tooltipContent = `<h4>Unknown Item</h4>`;
+            }
+        } else {
+            // If no itemId, show a placeholder based on category
+            const category = $target.data('category');
+            console.log("No itemId, using category:", category); // Debug log
+            tooltipContent = `<h4>Unknown ${category.charAt(0).toUpperCase() + category.slice(1)} Outcome</h4>`;
+        }
+
+        // Create and position the tooltip
+        let tooltip = $(".custom-tooltip");
+        if (!tooltip.length) {
+            tooltip = $('<div class="custom-tooltip"></div>').appendTo(document.body);
+        }
+        tooltip.empty().html(tooltipContent).css({
+            position: 'absolute',
+            background: '#1c2526',
+            border: '1px solid #4b4a44',
+            padding: '5px',
+            borderRadius: '3px',
+            color: '#f0f0e0',
+            zIndex: 10001,
+            display: 'block',
+            pointerEvents: 'none',
+            top: (event.pageY + 5) + 'px', // Position below mouse
+            left: (event.pageX + 5) + 'px'  // Position right of mouse
+        }).appendTo(document.body); // Ensure it's appended to body
+
+        // Dynamically adjust width based on height to maintain a 2:1 aspect ratio
+        const contentHeight = tooltip.outerHeight();
+        const width = contentHeight * 2; // 2:1 aspect ratio for wider display
+        tooltip.css('width', width + 'px');
+
+        console.log("Tooltip HTML after insertion:", tooltip.html()); // Debug log
+        console.log("Calculated width:", width, "Height:", contentHeight); // Debug log
+        console.log("Tooltip DOM structure:", tooltip[0].outerHTML); // Debug DOM structure
+    }).on("mouseleave", () => {
+        $(".custom-tooltip").remove();
+    });
+
     craftingTabContent.find('.craft-btn').off("click").on("click", () => handleCrafting());
     craftingTabContent.find('.clear-slots-btn').off("click").on("click", () => {
         craftingState.selectedReagents = [null, null, null];

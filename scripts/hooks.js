@@ -106,6 +106,52 @@ Hooks.on("renderActorSheet", async (app, html, data) => {
         console.log("Debug: renderActorSheet - Crafting tab content is NOT present in the DOM!");
     }
 
+// Modify item names to show reagent IPs with dynamic essence prefix
+const itemElements = liveHtml.find('.item-list .item .item-name, .item-pile-inventory-item .item-name');
+itemElements.each((index, element) => {
+    const itemId = $(element).closest('.item, .item-pile-inventory-item').data('item-id');
+    if (itemId) {
+        const item = actor.items.get(itemId);
+        if (item) {
+            const isReagent = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "isReagent") || false;
+            const ipValues = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "ipValues") || { combat: 0, utility: 0, entropy: 0 };
+            const combatIP = Number(ipValues.combat) || 0;
+            const utilityIP = Number(ipValues.utility) || 0;
+            const entropyIP = Number(ipValues.entropy) || 0;
+            // Check if item is a reagent before appending IPs
+            if (isReagent) {
+                // Determine the prefix based on essence
+                const essence = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "essence") || "None";
+                let prefix = "N"; // Default to N for None or undefined
+                switch (essence.toLowerCase()) {
+                    case "fey":
+                        prefix = "F";
+                        break;
+                    case "eldritch":
+                        prefix = "E";
+                        break;
+                    case "primal":
+                        prefix = "P";
+                        break;
+                    case "none":
+                    default:
+                        prefix = "N";
+                        break;
+                }
+                const ipString = `(${prefix}: ${combatIP} ${utilityIP} ${entropyIP})`;
+                // Preserve original content and append IP string
+                const $element = $(element);
+                if (!$element.find('.reagent-ips-span').length) {
+                    $element.append(`<span class="reagent-ips-span">${ipString}</span>`);
+                } else {
+                    $element.find('.reagent-ips-span').text(ipString);
+                }
+                console.log(`Debug: Updated item ${item.name} with IPs: ${ipString}`);
+            }
+        }
+    }
+});
+
     // Set up a MutationObserver to watch for tab changes
     const tabsElement = tabs[0];
     if (!app._tabObserver) {
@@ -269,6 +315,218 @@ Hooks.on("renderItemSheet", async (app, html, data) => {
     }
 });
 
+/* === Item Update Hook for Dynamic Updates === */
+Hooks.on("updateItem", (item, update, options, userId) => {
+    console.log("Debug: updateItem - Item updated:", item.name, "Update:", update, "Options:", options);
+    if (update?.flags?.["vikarovs-guide-to-kaeliduran-crafting"]?.ipValues || update?.flags?.["vikarovs-guide-to-kaeliduran-crafting"]?.essence) {
+        const actor = item.actor;
+        if (actor) {
+            const actorSheet = Object.values(ui.windows).find(w => w.actor === actor && w instanceof ActorSheet);
+            if (actorSheet && !actorSheet._isRendering) {
+                console.log("Debug: updateItem - Re-rendering actor sheet for", actor.name);
+                actorSheet.render(false);
+            }
+        }
+    }
+});
+
+/* === Item Piles Merchant Sheet Hook === */
+Hooks.once('init', () => {
+    // Inject CSS for Item Piles merchant sheet
+    const style = document.createElement('style');
+    style.textContent = `
+        .item-piles-merchant-sheet .reagent-ips-span {
+            color: #000000; /* Black text for Item Piles merchant sheet */
+        }
+    `;
+    document.head.appendChild(style);
+});
+
+Hooks.on("renderMerchantApp", (app, html, data) => {
+    // Try to find the actor through multiple methods
+    let actor = null;
+    let items = null;
+
+    // Method 1: Check data.merchant
+    if (data.merchant) {
+        actor = data.merchant;
+        items = actor.items;
+    }
+
+    // Method 2: Check app.document (common in Foundry apps)
+    if (!actor && app.document) {
+        actor = app.document;
+        items = actor.items;
+    }
+
+    // Method 3: Check app.actor (fallback)
+    if (!actor && app.actor) {
+        actor = app.actor;
+        items = actor.items;
+    }
+
+    // Method 4: Check for an actor ID in app.options.id and fetch the actor
+    if (!actor && app.options && app.options.id) {
+        const actorIdMatch = app.options.id.match(/item-pile-merchant-([^-]+)/);
+        if (actorIdMatch && actorIdMatch[1]) {
+            const actorId = actorIdMatch[1];
+            actor = game.actors.get(actorId);
+            if (actor) {
+                items = actor.items;
+            }
+        }
+    }
+
+    // Final check: If no actor or items found, exit
+    if (!actor || !items) {
+        return;
+    }
+
+    // Access the DOM directly using the window's ID
+    const windowId = app.options.id;
+    const windowElement = document.getElementById(windowId);
+    if (!windowElement) {
+        return;
+    }
+
+    // Find item rows in the DOM
+    let itemElements = $(windowElement).find('.item-piles-item-row .item-piles-clickable');
+    if (itemElements.length === 0) {
+        itemElements = $(windowElement).find('.item-row .item-name');
+        if (itemElements.length === 0) {
+            itemElements = $(windowElement).find('.item-piles-item .item-name');
+            if (itemElements.length === 0) {
+                itemElements = $(windowElement).find('[data-item-id] .item-name');
+                if (itemElements.length === 0) {
+                    itemElements = $(windowElement).find('.item-piles-item');
+                    if (itemElements.length === 0) {
+                        itemElements = $(windowElement).find('.item');
+                        if (itemElements.length === 0) {
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    itemElements.each((index, element) => {
+        const $element = $(element);
+        let displayedName = $element.find('.item-name').text().trim() || $element.text().trim();
+
+        // Find the item in items that matches the displayed name (case-insensitive)
+        const item = items.find(i => i.name.toLowerCase() === displayedName.toLowerCase());
+        if (item) {
+            const isReagent = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "isReagent") || false;
+            const ipValues = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "ipValues") || { combat: 0, utility: 0, entropy: 0 };
+            const combatIP = Number(ipValues.combat) || 0;
+            const utilityIP = Number(ipValues.utility) || 0;
+            const entropyIP = Number(ipValues.entropy) || 0;
+            if (isReagent) {
+                // Determine the prefix based on essence
+                const essence = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "essence") || "None";
+                let prefix = "N"; // Default to N for None or undefined
+                switch (essence.toLowerCase()) {
+                    case "fey":
+                        prefix = "F";
+                        break;
+                    case "eldritch":
+                        prefix = "E";
+                        break;
+                    case "primal":
+                        prefix = "P";
+                        break;
+                    case "none":
+                    default:
+                        prefix = "N";
+                        break;
+                }
+                const ipString = `(${prefix}: ${combatIP} ${utilityIP} ${entropyIP})`;
+                if (!$element.find('.reagent-ips-span').length) {
+                    $element.append(`<span class="reagent-ips-span">${ipString}</span>`);
+                } else {
+                    $element.find('.reagent-ips-span').text(ipString);
+                }
+            }
+        }
+    });
+});
+
+/* === Actor Sheet Hook === */
+Hooks.on("renderActorSheet", (app, html, data) => {
+    // Try to find the actor through multiple methods
+    let actor = null;
+    let items = null;
+
+    // Method 1: Check app.actor
+    if (app.actor) {
+        actor = app.actor;
+        items = actor.items;
+    }
+
+    // Method 2: Check data.actor (fallback)
+    if (!actor && data.actor) {
+        actor = data.actor;
+        items = actor.items;
+    }
+
+    // Final check: If no actor or items found, exit
+    if (!actor || !items) {
+        return;
+    }
+
+    // Find item rows in the actor sheet
+    let itemElements = html.find('.item-list .item');
+    if (itemElements.length === 0) {
+        itemElements = html.find('.inventory-list .item');
+        if (itemElements.length === 0) {
+            itemElements = html.find('[data-item-id]');
+            if (itemElements.length === 0) {
+                return;
+            }
+        }
+    }
+
+    itemElements.each((index, element) => {
+        const $element = $(element);
+        let displayedName = $element.find('.item-name').text().trim() || $element.text().trim();
+
+        // Find the item in items that matches the displayed name (case-insensitive)
+        const item = items.find(i => i.name.toLowerCase() === displayedName.toLowerCase());
+        if (item) {
+            const isReagent = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "isReagent") || false;
+            const ipValues = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "ipValues") || { combat: 0, utility: 0, entropy: 0 };
+            const combatIP = Number(ipValues.combat) || 0;
+            const utilityIP = Number(ipValues.utility) || 0;
+            const entropyIP = Number(ipValues.entropy) || 0;
+            if (isReagent) {
+                // Determine the prefix based on essence
+                const essence = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "essence") || "None";
+                let prefix = "P"; // Default to P for Primal or undefined
+                switch (essence.toLowerCase()) {
+                    case "fey":
+                        prefix = "F";
+                        break;
+                    case "eldritch":
+                        prefix = "E";
+                        break;
+                    case "none":
+                    case "primal": // Default to P for Primal or None
+                    default:
+                        prefix = "P";
+                        break;
+                }
+                const ipString = `(${prefix}: ${combatIP} ${utilityIP} ${entropyIP})`;
+                if (!$element.find('.reagent-ips-span').length) {
+                    $element.append(`<span class="reagent-ips-span">${ipString}</span>`);
+                } else {
+                    $element.find('.reagent-ips-span').text(ipString);
+                }
+            }
+        }
+    });
+});
+
 /* === Helper Functions === */
 function ensureElement(parent, selector, html) {
     let element = parent.find(selector);
@@ -285,3 +543,29 @@ function removeMagicalCheckbox(html) {
     });
     if (magicalCheckbox.length) magicalCheckbox.remove();
 }
+
+Hooks.once('init', () => {
+    const style = document.createElement('style');
+    style.textContent = `
+        .item-piles-merchant-sheet .reagent-ips-span {
+            color: #000000; /* Black text for Item Piles merchant sheet */
+        }
+        .outcome-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .outcome-text {
+            color: #ffffff; /* White text for dark theme */
+            font-weight: bold;
+        }
+        .outcome-item-icon {
+            cursor: pointer;
+        }
+        .outcome-item-icon img {
+            width: 24px;
+            height: 24px;
+        }
+    `;
+    document.head.appendChild(style);
+});
