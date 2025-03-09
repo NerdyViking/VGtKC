@@ -31,6 +31,7 @@ export class ReagentSelectionDialog extends Application {
         });
     }
 
+    /* -- Header Buttons -- */
     _getHeaderButtons() {
         return super._getHeaderButtons().map(button => {
             if (button.class === "close") button.label = "";

@@ -30,10 +30,6 @@ Hooks.once("init", () => {
 
     // Add V2 preRollToolCheck hook to debug the roll configuration
     Hooks.on("dnd5e.preToolCheckRollConfiguration", (actor, config) => {
-        console.log("Debug: dnd5e.preToolCheckRollConfiguration - Actor:", actor);
-        console.log("Debug: dnd5e.preToolCheckRollConfiguration - Config:", config);
-        console.log("Debug: dnd5e.preToolCheckRollConfiguration - Actor traits:", actor.system.traits);
-        console.log("Debug: dnd5e.preToolCheckRollConfiguration - Actor abilities:", actor.system.abilities);
         if (config?.data?.tool === "alchemist") {
             config.ability = config.ability || "int";
         }
@@ -47,28 +43,22 @@ Hooks.on("renderActorSheet", async (app, html, data) => {
     if (actor.type !== "character" || !(app instanceof ActorSheet) || app._isRendering) return;
     app._isRendering = true;
 
-    console.log("Debug: renderActorSheet - Starting render for actor:", actor.name);
-
     const liveHtml = $(app.element);
     const sheetBody = liveHtml.find('.sheet-body');
     const tabs = liveHtml.find('.tabs');
     if (!sheetBody.length || !tabs.length) {
-        console.log("Debug: renderActorSheet - Missing sheetBody or tabs, aborting render.");
         app._isRendering = false;
         return;
     }
 
     // Check the active tab
     const activeTab = app._tabs[0]?.active || "description";
-    console.log("Debug: renderActorSheet - Active tab on render:", activeTab);
 
     if (!tabs.find('[data-tab="crafting"]').length) {
         tabs.find('.item').last().after('<a class="item" data-tab="crafting"><i class="fas fa-book-open"></i></a>');
-        console.log("Debug: renderActorSheet - Added crafting tab link to tabs.");
     }
 
     app.craftingState = app.craftingState || { selectedReagents: [null, null, null], selectedOutcome: null };
-    console.log("Debug: renderActorSheet - Crafting state initialized:", app.craftingState);
 
     const reagentSlotClickHandler = async (event, updateCraftingUI) => {
         if (event && typeof event.preventDefault === "function") {
@@ -91,74 +81,67 @@ Hooks.on("renderActorSheet", async (app, html, data) => {
         }, app.craftingState.selectedReagents).render(true);
     };
 
-    console.log("Debug: renderActorSheet - Rendering crafting tab...");
     await renderCraftingTab(app, liveHtml, data, calculateIPSums, determineOutcome, reagentSlotClickHandler, async () => {
         await handleCrafting(app, app.craftingState, calculateIPSums, determineOutcome, renderCraftingTab, liveHtml);
     }, app.updateCraftingUI);
-    console.log("Debug: renderActorSheet - Crafting tab rendering complete.");
 
     // Verify the crafting tab content is in the DOM
     const targetTabBody = liveHtml.find('.sheet-body .main-content .tab-body');
     const craftingTabContent = targetTabBody.find('.tab.crafting');
     if (craftingTabContent.length) {
-        console.log("Debug: renderActorSheet - Crafting tab content is present in the DOM.");
     } else {
-        console.log("Debug: renderActorSheet - Crafting tab content is NOT present in the DOM!");
     }
 
-// Modify item names to show reagent IPs with dynamic essence prefix
-const itemElements = liveHtml.find('.item-list .item .item-name, .item-pile-inventory-item .item-name');
-itemElements.each((index, element) => {
-    const itemId = $(element).closest('.item, .item-pile-inventory-item').data('item-id');
-    if (itemId) {
-        const item = actor.items.get(itemId);
-        if (item) {
-            const isReagent = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "isReagent") || false;
-            const ipValues = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "ipValues") || { combat: 0, utility: 0, entropy: 0 };
-            const combatIP = Number(ipValues.combat) || 0;
-            const utilityIP = Number(ipValues.utility) || 0;
-            const entropyIP = Number(ipValues.entropy) || 0;
-            // Check if item is a reagent before appending IPs
-            if (isReagent) {
-                // Determine the prefix based on essence
-                const essence = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "essence") || "None";
-                let prefix = "N"; // Default to N for None or undefined
-                switch (essence.toLowerCase()) {
-                    case "fey":
-                        prefix = "F";
-                        break;
-                    case "eldritch":
-                        prefix = "E";
-                        break;
-                    case "primal":
-                        prefix = "P";
-                        break;
-                    case "none":
-                    default:
-                        prefix = "N";
-                        break;
+    // Modify item names to show reagent IPs with dynamic essence prefix
+    const itemElements = liveHtml.find('.item-list .item .item-name, .item-pile-inventory-item .item-name');
+    itemElements.each((index, element) => {
+        const itemId = $(element).closest('.item, .item-pile-inventory-item').data('item-id');
+        if (itemId) {
+            const item = actor.items.get(itemId);
+            if (item) {
+                const isReagent = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "isReagent") || false;
+                const ipValues = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "ipValues") || { combat: 0, utility: 0, entropy: 0 };
+                const combatIP = Number(ipValues.combat) || 0;
+                const utilityIP = Number(ipValues.utility) || 0;
+                const entropyIP = Number(ipValues.entropy) || 0;
+                // Check if item is a reagent before appending IPs
+                if (isReagent) {
+                    // Determine the prefix based on essence
+                    const essence = item.getFlag("vikarovs-guide-to-kaeliduran-crafting", "essence") || "None";
+                    let prefix = "N"; // Default to N for None or undefined
+                    switch (essence.toLowerCase()) {
+                        case "fey":
+                            prefix = "F";
+                            break;
+                        case "eldritch":
+                            prefix = "E";
+                            break;
+                        case "primal":
+                            prefix = "P";
+                            break;
+                        case "none":
+                        default:
+                            prefix = "N";
+                            break;
+                    }
+                    const ipString = `(${prefix}: ${combatIP} ${utilityIP} ${entropyIP})`;
+                    // Preserve original content and append IP string
+                    const $element = $(element);
+                    if (!$element.find('.reagent-ips-span').length) {
+                        $element.append(`<span class="reagent-ips-span">${ipString}</span>`);
+                    } else {
+                        $element.find('.reagent-ips-span').text(ipString);
+                    }
                 }
-                const ipString = `(${prefix}: ${combatIP} ${utilityIP} ${entropyIP})`;
-                // Preserve original content and append IP string
-                const $element = $(element);
-                if (!$element.find('.reagent-ips-span').length) {
-                    $element.append(`<span class="reagent-ips-span">${ipString}</span>`);
-                } else {
-                    $element.find('.reagent-ips-span').text(ipString);
-                }
-                console.log(`Debug: Updated item ${item.name} with IPs: ${ipString}`);
             }
         }
-    }
-});
+    });
 
     // Set up a MutationObserver to watch for tab changes
     const tabsElement = tabs[0];
     if (!app._tabObserver) {
-        console.log("Debug: renderActorSheet - Setting up MutationObserver for tab changes.");
         app._tabObserver = new MutationObserver(() => {
             const currentActiveTab = app._tabs[0]?.active || "description";
-            console.log("Debug: MutationObserver - Tab change detected. Current active tab:", currentActiveTab);
         });
 
         app._tabObserver.observe(tabsElement, {
@@ -166,26 +149,21 @@ itemElements.each((index, element) => {
             attributeFilter: ["class"],
             subtree: true
         });
-        console.log("Debug: renderActorSheet - MutationObserver attached to tabs element.");
     }
 
     // Clear crafting state when the sheet closes
     if (!app._closeHandlerSet) {
         app.element.on('close', () => {
-            console.log("Debug: renderActorSheet - Sheet closing, clearing crafting state...");
             app.craftingState = null;
             if (app._tabObserver) {
                 app._tabObserver.disconnect();
                 app._tabObserver = null;
-                console.log("Debug: renderActorSheet - MutationObserver disconnected on sheet close.");
             }
         });
         app._closeHandlerSet = true;
-        console.log("Debug: renderActorSheet - Close handler set.");
     }
 
     app._isRendering = false;
-    console.log("Debug: renderActorSheet - Render complete.");
 });
 
 /* === Item Sheet Modification === */
@@ -317,13 +295,11 @@ Hooks.on("renderItemSheet", async (app, html, data) => {
 
 /* === Item Update Hook for Dynamic Updates === */
 Hooks.on("updateItem", (item, update, options, userId) => {
-    console.log("Debug: updateItem - Item updated:", item.name, "Update:", update, "Options:", options);
     if (update?.flags?.["vikarovs-guide-to-kaeliduran-crafting"]?.ipValues || update?.flags?.["vikarovs-guide-to-kaeliduran-crafting"]?.essence) {
         const actor = item.actor;
         if (actor) {
             const actorSheet = Object.values(ui.windows).find(w => w.actor === actor && w instanceof ActorSheet);
             if (actorSheet && !actorSheet._isRendering) {
-                console.log("Debug: updateItem - Re-rendering actor sheet for", actor.name);
                 actorSheet.render(false);
             }
         }

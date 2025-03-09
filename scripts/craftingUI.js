@@ -28,8 +28,6 @@ export async function renderCraftingTab(app, html, data, calculateIPSums, determ
     if (isCraftingTabActive) {
         craftingTabContent.addClass('active');
     }
-    console.log("Debug: renderCraftingTab - Is crafting tab active on initial render?", isCraftingTabActive);
-    console.log("Debug: renderCraftingTab - Crafting tab classes on initial render:", craftingTabContent.attr('class'));
 
     /* === UI Update Logic === */
     const updateCraftingUI = async () => {
@@ -58,8 +56,6 @@ export async function renderCraftingTab(app, html, data, calculateIPSums, determ
         if (isCraftingTabActive) {
             craftingTabContent.addClass('active');
         }
-        console.log("Debug: updateCraftingUI - Is crafting tab active?", isCraftingTabActive);
-        console.log("Debug: updateCraftingUI - Crafting tab classes after update:", craftingTabContent.attr('class'));
 
         const craftingHTML = await renderTemplate(templatePath, templateData);
         craftingTabContent.html(craftingHTML);
@@ -138,12 +134,9 @@ function bindEventHandlers(craftingTabContent, craftingState, reagentSlotClickHa
         const itemId = $target.data('itemId');
         let tooltipContent = '';
 
-        console.log("Hovering over icon with itemId:", itemId); // Debug log
-
         if (itemId) {
             const item = game.items.get(itemId) || craftingState.actor.items.get(itemId);
             if (item) {
-                console.log("Item found:", item.name, "Description:", item.system?.description?.value); // Debug log
                 const name = item.name || "Unknown Item";
                 // Strip HTML tags from the description to avoid rendering issues
                 const description = item.system?.description?.value ? item.system.description.value.replace(/<[^>]+>/g, ' ').trim() : "";
@@ -151,15 +144,12 @@ function bindEventHandlers(craftingTabContent, craftingState, reagentSlotClickHa
                     <h4>${name}</h4>
                     ${description ? `<div>${description}</div>` : ""}
                 `;
-                console.log("Tooltip content:", tooltipContent); // Debug log
             } else {
-                console.log("Item not found for itemId:", itemId); // Debug log
                 tooltipContent = `<h4>Unknown Item</h4>`;
             }
         } else {
             // If no itemId, show a placeholder based on category
             const category = $target.data('category');
-            console.log("No itemId, using category:", category); // Debug log
             tooltipContent = `<h4>Unknown ${category.charAt(0).toUpperCase() + category.slice(1)} Outcome</h4>`;
         }
 
@@ -186,10 +176,6 @@ function bindEventHandlers(craftingTabContent, craftingState, reagentSlotClickHa
         const contentHeight = tooltip.outerHeight();
         const width = contentHeight * 2; // 2:1 aspect ratio for wider display
         tooltip.css('width', width + 'px');
-
-        console.log("Tooltip HTML after insertion:", tooltip.html()); // Debug log
-        console.log("Calculated width:", width, "Height:", contentHeight); // Debug log
-        console.log("Tooltip DOM structure:", tooltip[0].outerHTML); // Debug DOM structure
     }).on("mouseleave", () => {
         $(".custom-tooltip").remove();
     });

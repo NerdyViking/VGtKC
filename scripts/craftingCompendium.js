@@ -41,8 +41,7 @@ export class CraftingCompendium extends ItemSheet {
                 scope: 'world',
                 config: false,
                 type: Object,
-                default: { Combat: {}, Utility: {}, Entropy: {} },
-                onChange: value => console.log('Outcomes updated:', value)
+                default: { Combat: {}, Utility: {}, Entropy: {} }
             });
         });
 
@@ -55,6 +54,7 @@ export class CraftingCompendium extends ItemSheet {
         });
     }
 
+    /* === Header Buttons === */
     _getHeaderButtons() {
         const buttons = super._getHeaderButtons();
 
@@ -66,7 +66,6 @@ export class CraftingCompendium extends ItemSheet {
                 icon: "fas fa-edit",
                 onclick: () => {
                     this.editMode = !this.editMode;
-                    console.log("Debug: Edit mode toggled to", this.editMode);
                     this.render(); // Re-render to toggle edit mode UI
                 }
             });
@@ -76,6 +75,7 @@ export class CraftingCompendium extends ItemSheet {
         return buttons.map(button => ({ ...button, label: "" }));
     }    
 
+    /* === Event Listeners === */
     activateListeners(html) {
         super.activateListeners(html);
 
@@ -85,9 +85,7 @@ export class CraftingCompendium extends ItemSheet {
             const tab = event.currentTarget.dataset.tab;
             try {
                 await this._actor.setFlag("vikarovs-guide-to-kaeliduran-crafting", "lastCraftingCompendiumTab", tab);
-                console.log("Debug: Tab changed to", tab);
             } catch (error) {
-                console.error("Failed to set last viewed tab:", error);
                 ui.notifications.error("Failed to save last viewed tab.");
             }
         });
@@ -98,7 +96,6 @@ export class CraftingCompendium extends ItemSheet {
             const itemId = event.currentTarget.dataset.itemId;
             const item = game.items.get(itemId); // Use world items for GM-defined outcomes
             if (item) {
-                console.log("Debug: Opening item sheet for", item.name);
                 item.sheet.render(true);
             }
         });
@@ -109,7 +106,6 @@ export class CraftingCompendium extends ItemSheet {
             html.find('.clear-outcome').on("click", async (event) => {
                 const sum = event.currentTarget.dataset.sum;
                 const category = event.currentTarget.dataset.category;
-                console.log("Debug: Clear button clicked for", category, "sum", sum);
                 const outcomes = foundry.utils.deepClone(game.settings.get('vikarovs-guide-to-kaeliduran-crafting', 'consumableOutcomes'));
                 delete outcomes[category][sum];
                 await game.settings.set('vikarovs-guide-to-kaeliduran-crafting', 'consumableOutcomes', outcomes);
@@ -119,35 +115,28 @@ export class CraftingCompendium extends ItemSheet {
             // Drag-and-drop for outcome slots
             html.find('.outcome-cell').on('drop', async (event) => {
                 event.preventDefault();
-                console.log("Debug: Drop event triggered on outcome-cell");
                 try {
                     const data = JSON.parse(event.originalEvent.dataTransfer.getData('text/plain'));
-                    console.log("Debug: Drop data", data);
                     if (data.type !== 'Item') return;
                     const item = await fromUuid(data.uuid);
                     if (!item) {
-                        console.error("Debug: Item not found for UUID", data.uuid);
                         return;
                     }
                     const sum = event.currentTarget.dataset.sum;
                     const category = event.currentTarget.dataset.category;
-                    console.log(`Debug: Dropping item ${item.id} into ${category} sum ${sum}`);
                     const outcomes = foundry.utils.deepClone(game.settings.get('vikarovs-guide-to-kaeliduran-crafting', 'consumableOutcomes'));
                     outcomes[category][sum] = item.id;
                     await game.settings.set('vikarovs-guide-to-kaeliduran-crafting', 'consumableOutcomes', outcomes);
-                    console.log("Debug: Updated outcomes setting", outcomes);
                     this.render();
                 } catch (error) {
-                    console.error("Debug: Error during drop event", error);
                 }
             });
         }
     }
 
+    /* === Data Preparation === */
     async getData() {
         const data = await super.getData();
-
-        console.log("Debug: CraftingCompendium - getData called", data);
 
         // Retrieve last viewed tab
         const lastTab = await this._actor.getFlag("vikarovs-guide-to-kaeliduran-crafting", "lastCraftingCompendiumTab") || "combat";
@@ -197,9 +186,6 @@ export class CraftingCompendium extends ItemSheet {
                         const item = game.items.get(itemId);
                         if (item) {
                             itemImg = item.img;
-                            console.log(`Debug: Item ${itemId} for ${categoryKey} sum ${sum} has image: ${itemImg}`);
-                        } else {
-                            console.warn(`Debug: Item ${itemId} for ${categoryKey} sum ${sum} not found`);
                         }
                     }
                     outcomesData[sum] = { isKnown, itemId, itemImg };
@@ -210,10 +196,10 @@ export class CraftingCompendium extends ItemSheet {
 
         data.tabs = tabs;
         data.editMode = this.editMode && game.user.isGM;
-        console.log("Debug: CraftingCompendium - Prepared tab data", tabs);
         return data;
     }
 
+    /* === Cleanup === */
     async close(options = {}) {
         this.editMode = false; // Disable edit mode on close
         return super.close(options);

@@ -125,22 +125,17 @@ export async function handleCrafting(app, craftingState, calculateIPSums, determ
     const initialRarity = getRarity(maxSum);
 
     const baseCost = { common: 50, uncommon: 200, rare: 2000, veryRare: 20000, legendary: 100000 }[initialRarity];
-    console.log("Debug: Base cost for rarity", initialRarity, ":", baseCost);
     const reagentCost = craftingState.selectedReagents.reduce((total, r) => {
         const rarity = (r.system.rarity || "common").toLowerCase();
         const cost = { common: 10, uncommon: 50, rare: 600, veryRare: 6000, legendary: 50000 }[rarity];
-        console.log("Debug: Reagent", r.name, "rarity:", rarity, "cost:", cost);
         return total + (cost || 0); // Ensure cost is a number
     }, 0);
-    console.log("Debug: Total reagent cost:", reagentCost);
 
     // Calculate the base gold cost, then add a minimum cost (e.g., 10% of baseCost)
     const minimumGoldCost = Math.floor(baseCost * 0.1); // 10% of the base cost as a minimum
     const baseGoldCost = Math.max(0, baseCost - reagentCost);
     const goldCost = Math.max(minimumGoldCost, baseGoldCost);
     const currentGold = Number(actor.system.currency?.gp) || 0;
-    console.log("Debug: Minimum gold cost:", minimumGoldCost, "Base gold cost:", baseGoldCost, "Final gold cost:", goldCost);
-    console.log("Debug: Current gold before deduction:", currentGold, "Calculated gold cost:", goldCost);
 
     if (currentGold < goldCost) {
         ui.notifications.error(`Insufficient gold! Need ${goldCost} gp, have ${currentGold} gp.`);
@@ -148,10 +143,6 @@ export async function handleCrafting(app, craftingState, calculateIPSums, determ
     }
 
     const dc = { common: 10, uncommon: 15, rare: 20, veryRare: 25, legendary: 30 }[initialRarity];
-    console.log("Debug: CONFIG.DND5E.toolIds:", CONFIG.DND5E.toolIds);
-    console.log("Debug: Actor tools:", actor.system.tools);
-    console.log("Debug: Actor tool items:", actor.items.filter(i => i.type === "tool" && (i.system.identifier === "alchemist" || i.name.toLowerCase() === "alchemist's supplies")));
-    console.log("Debug: Actor spell DC:", actor.system.attributes.spelldc);
 
     // Validate the tool key
     const toolKey = "alchemist";
@@ -187,55 +178,44 @@ export async function handleCrafting(app, craftingState, calculateIPSums, determ
     }
 
     // Trigger the roll and capture the result directly from rollToolCheck
-    console.log("Debug: Triggering toolItem.rollToolCheck with options:", options);
     let rollTotal = null;
     try {
         const rollResult = await toolItem.rollToolCheck(options);
-        console.log("Debug: rollToolCheck result:", rollResult);
         if (rollResult && Array.isArray(rollResult) && rollResult.length > 0 && rollResult[0]?.total != null) {
             rollTotal = rollResult[0].total;
-            console.log("Debug: Roll total from rollToolCheck:", rollTotal);
         } else {
             throw new Error("Invalid roll result returned from rollToolCheck.");
         }
     } catch (err) {
         ui.notifications.error(`Failed to determine tool check result: ${err.message}`);
-        console.error("Debug: Tool check error:", err);
         return;
     }
 
     if (rollTotal === null) return;
 
-    console.log("Debug: Roll total after processing:", rollTotal, "DC:", dc);
     if (rollTotal === null) {
         ui.notifications.error("Failed to determine tool check result. Roll total is null.");
         return;
     }
 
-    console.log("Debug: Proceeding with crafting logic...");
     let finalSum = maxSum;
     let quantity = 1;
     const margin = rollTotal - dc;
-    console.log("Debug: Margin (rollTotal - dc):", margin);
 
     if (margin >= 10) {
         quantity = 2;
-        console.log("Debug: Success with large margin (>=10), quantity set to 2");
     } else if (margin >= 0) {
         quantity = 1;
-        console.log("Debug: Success with small margin (>=0), quantity set to 1");
     } else if (margin >= -9) {
         const reduction = new Roll("1d4");
         await reduction.roll(); // Evaluates the roll
         finalSum = Math.max(1, maxSum - reduction.total);
         await reduction.toMessage({ flavor: "Reduction to IP sum due to crafting failure (near miss)" });
-        console.log("Debug: Near miss (margin >= -9), reduced IP sum by:", reduction.total);
     } else {
         const reduction = new Roll("2d4");
         await reduction.roll(); // Evaluates the roll
         finalSum = Math.max(1, maxSum - reduction.total);
         await reduction.toMessage({ flavor: "Reduction to IP sum due to crafting failure (large miss)" });
-        console.log("Debug: Large miss (margin < -9), reduced IP sum by:", reduction.total);
     }
 
     let finalCategory = selectedCategory;
@@ -256,7 +236,7 @@ export async function handleCrafting(app, craftingState, calculateIPSums, determ
         }
     }
 
-    const outcomeCategoryKey = finalCategory.charAt(0).toUpperCase() + finalCategory.slice(1); // Renamed to avoid conflict
+    const outcomeCategoryKey = finalCategory.charAt(0).toUpperCase() + finalCategory.slice(1);
     let knownOutcomes = actor.getFlag("vikarovs-guide-to-kaeliduran-crafting", "knownCraftingOutcomes") || { Combat: [], Utility: [], Entropy: [] };
 
     // Ensure all categories exist
@@ -299,9 +279,7 @@ export async function handleCrafting(app, craftingState, calculateIPSums, determ
 
     // Create the crafted item and update known outcomes
     try {
-        console.log("Debug: Creating crafted item...");
         const createdItems = await actor.createEmbeddedDocuments("Item", [consumableData]);
-        console.log("Debug: Created items:", createdItems);
         ui.notifications.info(`You crafted ${quantity} ${consumableData.name}(s)!`);
 
         // Update known outcomes only if not already known
@@ -312,41 +290,31 @@ export async function handleCrafting(app, craftingState, calculateIPSums, determ
         }
     } catch (error) {
         ui.notifications.error("Failed to create crafted item.");
-        console.error("Debug: Item creation error:", error);
         return; // Stop execution if item creation fails
     }
 
     // Consume reagents after creating the item
     try {
-        console.log("Debug: Consuming reagents...");
         await consumeReagents(actor, craftingState.selectedReagents);
-        console.log("Debug: Reagents consumed, updated quantities:", craftingState.selectedReagents.map(r => ({ name: r.name, quantity: r.system.quantity })));
     } catch (error) {
         ui.notifications.error("Failed to consume reagents.");
-        console.error("Debug: Reagent consumption error:", error);
     }
 
     // Deduct gold cost
     try {
-        console.log("Debug: Deducting gold cost...");
         const newGold = Math.max(0, currentGold - goldCost);
         const currencyUpdate = { ...actor.system.currency, gp: newGold };
-        console.log("Debug: Currency update object:", currencyUpdate);
         await actor.update({ "system.currency": currencyUpdate });
         const updatedGold = Number(actor.system.currency?.gp) || 0;
-        console.log("Debug: Gold after deduction (actual):", updatedGold);
         if (updatedGold !== newGold) {
             ui.notifications.error("Failed to deduct gold cost correctly.");
-            console.error("Debug: Gold deduction failed. Expected:", newGold, "Actual:", updatedGold);
         }
     } catch (error) {
         ui.notifications.error("Failed to deduct gold cost.");
-        console.error("Debug: Gold deduction error:", error);
     }
 
     // Reset crafting state and re-render the tab
     try {
-        console.log("Debug: Resetting crafting state...");
         craftingState.selectedReagents = [null, null, null];
         craftingState.selectedOutcome = null;
 
@@ -376,10 +344,8 @@ export async function handleCrafting(app, craftingState, calculateIPSums, determ
         if (app.updateCraftingUI) {
             await app.updateCraftingUI();
         }
-        console.log("Debug: Crafting tab re-rendered and updated.");
     } catch (error) {
         ui.notifications.error("Failed to reset crafting state and re-render tab.");
-        console.error("Debug: Crafting state reset error:", error);
     }
 }
 
